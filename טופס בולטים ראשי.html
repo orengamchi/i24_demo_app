@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>טופס הזמנה - מאסטר</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        /* משתנים גלובליים מתוך קוד הלובי */
+        :root {
+            --bg-app: #0f172a; /* Slate 900 - רקע כללי של האפליקציה (רקע של ה-body) */
+            --primary-blue: #3b82f6; /* Blue 500 - כחול ראשי */
+            --text-light: #f1f5f9; /* Slate 100 - טקסט בהיר */
+            --card-bg: #1e293b; /* Slate 800 - רקע הכרטיס הראשי של הטופס */
+            --card-bg-light: #334155; /* Slate 700 - רקע למצב בהיר */
+            --border-color: #475569; /* Slate 600 */
+        }
+
+        /* הגדרות גלובליות - מוגדר כברירת מחדל כ"מצב כהה" כדי להתאים ללובי */
+        body {
+            font-family: 'Heebo', sans-serif;
+            direction: rtl; 
+            text-align: right;
+            transition: background-color 0.3s;
+            background-color: var(--bg-app); /* רקע אפליקציה */
+            color: var(--text-light);
+            
+            /* רקע גריד כהה - מותאם לצבע ה-app-bg */
+            background-image: linear-gradient(to right, #1e293b 1px, transparent 1px), linear-gradient(to bottom, #1e293b 1px, transparent 1px);
+            background-size: 20px 20px; 
+        }
+        
+        /* הגדרות לטופס במצב כהה (ברירת מחדל) */
+        .order-form {
+            background-color: var(--card-bg); /* רקע הכרטיס */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+        }
+        .section-title { 
+            color: var(--primary-blue); 
+            border-bottom-color: var(--primary-blue); 
+        }
+        .input-style { 
+            background-color: #334155; /* Slate 700 - שדה קלט כהה */
+            border-color: var(--border-color);
+            color: var(--text-light); 
+        }
+        .input-style::placeholder {
+            color: #94a3b8; /* Slate 400 */
+        }
+        .input-style:focus { 
+            border-color: var(--primary-blue); 
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); 
+        }
+        .readonly-info { 
+            background-color: #0f172a !important; 
+            border-color: var(--border-color) !important;
+            color: var(--text-light) !important;
+        }
+
+        /* ********************************* */
+        /* מצב בהיר (light-mode) - סגנון משופר (תיבות שיח באפור בהיר) */
+        /* ********************************* */
+        .light-mode body {
+            background-color: #f1f5f9; /* Slate 100 */
+            color: #0f172a;
+            background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+        }
+        .light-mode .order-form {
+            background-color: #ffffff; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .light-mode .section-title { 
+            color: #1e3a8a; /* כחול כהה יותר */
+            border-bottom-color: #94a3b8; /* גבול אפור בהיר */
+        }
+        .light-mode .input-style {
+            background-color: #f8fafc; /* אפור בהיר מאוד לתיבות שיח */
+            border-color: #cbd5e1; /* Slate 300 - גבול בהיר יותר */
+            color: #0f172a;
+        }
+        .light-mode .input-style:focus {
+            border-color: #94a3b8; /* גבול פוקוס אפור-כחול עדין */
+            box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.3); /* צל פוקוס עדין */
+        }
+        .light-mode .readonly-info { 
+            background-color: #e2e8f0 !important; /* אפור בהיר לרכיבי קריאה בלבד */
+            border-color: #cbd5e1 !important;
+            color: #1e293b !important;
+        }
+
+
+        /* סגנונות כלליים לשדות ספציפיים */
+        .clear-button { @apply px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-lg hover:bg-red-600 transition duration-150; }
+        .cancelled input[type="text"], .cancelled .input-style { background-color: #581c1c !important; border-color: #ef4444 !important; opacity: 0.6; text-decoration: line-through; color: #fca5a5; }
+        .light-mode .cancelled input[type="text"], .light-mode .cancelled .input-style { background-color: #fdd !important; border-color: #f00 !important; color: #721c24; }
+        .notes-container { @apply border-transparent !important; }
+        .section-input-style { width: 80%; font-size: 1.05em; margin-right: auto; margin-left: auto; }
+
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+<div id="form-container" class="max-w-3xl mx-auto bg-card-bg p-6 sm:p-8 rounded-xl shadow-2xl order-form">
+    
+    <header class="text-center mb-6 flex justify-between items-center flex-wrap gap-4">
+        <h1 id="main-form-title" class="text-3xl sm:text-4xl font-extrabold text-white mb-1">
+            📝 טופס הזמנה - בולטים
+        </h1>
+        <div class="flex space-x-2 space-x-reverse">
+            <button onclick="saveFormAsText()" class="action-button text-sm bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg px-4 py-2">
+                💾 שמור כקובץ טקסט (.txt)
+            </button>
+            <button onclick="toggleDarkMode()" class="mode-toggle-button text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg px-4 py-2">
+                ☀️ מצב יום
+            </button>
+        </div>
+    </header>
+    <p id="live-datetime" class="text-gray-400 text-sm mb-6 text-center"></p>
+    
+    <form id="orderForm">
+
+        <!-- פרטי הזמנה קבועים -->
+        <div class="mb-8 p-4 border border-border-color rounded-lg">
+            <h2 class="section-title">פרטי הזמנה</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label for="sender-name" class="block text-sm font-medium text-gray-300 mb-1">שם השולח/כתב:</label>
+                    <input type="text" id="sender-name" class="input-style" placeholder="הקלד כאן" required>
+                </div>
+                <div class="form-group">
+                    <label for="edition-name" class="block text-sm font-medium text-gray-300 mb-1">שם המהדורה:</label>
+                    <input type="text" id="edition-name" class="input-style" placeholder="הקלד כאן" required>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mt-4">
+                <div class="form-group">
+                    <label class="block text-sm font-medium text-gray-300 mb-1">תאריך שידור קבוע:</label>
+                    <div class="input-style readonly-info bg-gray-100 text-gray-600 font-semibold cursor-default" id="fixed-broadcast-date">3.12.2025</div>
+                </div>
+                <div class="form-group">
+                    <label class="block text-sm font-medium text-gray-300 mb-1">שעת שידור משוערת קבועה:</label>
+                    <div class="input-style readonly-info bg-gray-100 text-gray-600 font-semibold cursor-default" id="fixed-estimated-time">10:11</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- קבצים מצורפים קבועים -->
+        <div class="mb-8 p-4 border border-border-color rounded-lg">
+            <h2 class="section-title">קבצים מצורפים (סמן אם רלוונטי)</h2>
+            <div class="flex flex-wrap gap-4 items-center justify-between">
+                <div class="flex items-center space-x-2 space-x-reverse">
+                    <input type="checkbox" id="audio-file" data-label="קובץ אודיו (קריינות לגרפיקה)" class="attachment-checkbox h-4 w-4 text-blue-500 border-gray-600 rounded focus:ring-blue-500">
+                    <label for="audio-file" class="block text-sm text-gray-300">קובץ אודיו (קריינות לגרפיקה)</label>
+                </div>
+                <div class="flex items-center space-x-2 space-x-reverse">
+                    <input type="checkbox" id="image-file" data-label="תמונה (רקע או אילוסטרציה)" class="attachment-checkbox h-4 w-4 text-blue-500 border-gray-600 rounded focus:ring-blue-500">
+                    <label for="image-file" class="block text-sm text-gray-300">תמונה (רקע או אילוסטרציה)</label>
+                </div>
+                <div class="flex items-center space-x-2 space-x-reverse">
+                    <input type="checkbox" id="video-file" data-label="קובץ וידאו" class="attachment-checkbox h-4 w-4 text-blue-500 border-gray-600 rounded focus:ring-blue-500">
+                    <label for="video-file" class="block text-sm text-gray-300">קובץ וידאו</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- ***** תוכן גרפיקה (דינמי) ***** -->
+        <div id="dynamic-content-section" class="mb-8 p-4 border border-border-color rounded-lg">
+            <h2 class="section-title">תוכן הגרפיקה (נא למלא במדויק)</h2>
+            <!-- השדות ירונדרו כאן על ידי JavaScript בהתאם לתבנית -->
+        </div>
+
+        <!-- הערות נוספות - רוחב מלא, גובה 4 שורות, מוגבל ל-300 תווים -->
+        <div class="p-4 rounded-lg notes-container">
+            <h2 class="section-title">הערות נוספות לגרפיקאי (צבעים/סגנון/דגשים)</h2>
+            <div class="form-group">
+                <label for="notes" class="block text-sm font-medium text-gray-300 sr-only">הערות נוספות</label>
+                <textarea id="notes" class="input-style" rows="4" maxlength="300" placeholder="הקלד כאן הערות מיוחדות, דגשים על צבעים או סגנון גרפי רצוי... (מקסימום 300 תווים)"></textarea>
+            </div>
+        </div>
+    </form>
+    
+    <!-- זכויות יוצרים -->
+    <footer class="mt-8 text-center text-xs text-gray-500">
+        &copy; OREN GAMCHI
+    </footer>
+
+</div>
+
+<script>
+    // הגדרות תצורה לכל תבנית (Configuration - ניתן להעביר בהמשך ל-Firestore)
+    const templateConfigs = {
+        'Bullets': {
+            title: 'טופס הזמנה - בולטים',
+            fields: [
+                { id: 'main-title', label: 'כותרת ראשית', lines: 2, maxLen: 15, isBold: true, defaultValue: 'XVXVXVXVXVXV' },
+                { id: 'subtitle', label: 'כותרת משנה', lines: 2, maxLen: 15, isBold: false, defaultValue: 'דכדכדכדכד' },
+                { id: 'section1', label: 'סעיף 1', lines: 2, maxLen: 30, defaultValue: 'אני על זה עדיין' },
+                { id: 'section2', label: 'סעיף 2', lines: 2, maxLen: 30, defaultValue: 'דכדכדכדכד' },
+                { id: 'section3', label: 'סעיף 3', lines: 2, maxLen: 30, defaultValue: 'הזמן טקסט לקריינות.' },
+            ]
+        },
+        'Story': {
+            title: 'טופס הזמנה - סטורי',
+            fields: [
+                { id: 'story-title', label: 'כותרת ראשית לסטורי', lines: 1, maxLen: 40, isBold: true },
+                { id: 'sub-title', label: 'כותרת משנה', lines: 1, maxLen: 40 },
+                { id: 'long-text', label: 'טקסט לסטורי (פיסקה)', lines: 5, maxLen: 300, isTextArea: true },
+            ]
+        },
+        'LowerThird': {
+            title: 'טופס - כותרת תחתונה',
+            fields: [
+                { id: 'name', label: 'שם המופיע', lines: 1, maxLen: 25, isBold: true },
+                { id: 'title', label: 'תפקיד / כותרת תחתונה', lines: 1, maxLen: 35 },
+            ]
+        }
+        // ניתן להוסיף כאן תבניות נוספות
+    };
+
+    let activeConfig = templateConfigs.Bullets; // ברירת מחדל
+
+    // פונקציה לעדכון השעה והתאריך בזמן אמת
+    function updateLiveDateTime() {
+        const now = new Date();
+        const dateOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+        const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+        
+        const dateString = now.toLocaleDateString('he-IL', dateOptions);
+        const timeString = now.toLocaleTimeString('he-IL', timeOptions);
+        
+        document.getElementById('live-datetime').textContent = `שעה ותאריך נוכחיים: ${dateString} | ${timeString}`;
+    }
+
+    // פונקציה להפעלת ניווט באמצעות מקש Enter בין השדות המוגבלים
+    function setupEnterKeyNavigation() {
+        // אוסף את כל שדות הקלט בטופס הדינמי, ובנוסף את השדות הקבועים והערות
+        const inputs = Array.from(document.querySelectorAll('#orderForm input[type="text"]:not([disabled]), #orderForm textarea:not([disabled])'));
+        
+        inputs.forEach((currentField, index) => {
+            currentField.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' && currentField.tagName !== 'TEXTAREA') {
+                    event.preventDefault();
+                    
+                    const nextIndex = index + 1;
+                    if (nextIndex < inputs.length) {
+                        const nextField = inputs[nextIndex];
+                        nextField.focus();
+                        if (nextField.tagName === 'TEXTAREA') {
+                            nextField.setSelectionRange(nextField.value.length, nextField.value.length);
+                        }
+                    } else {
+                        // אם זה השדה האחרון, נמנע משליחת טופס
+                        document.getElementById('notes').focus(); 
+                    }
+                }
+            });
+        });
+    }
+
+    // פונקציה לניקוי וביטול קטגוריה (כותרת או סעיף)
+    function clearSection(sectionId) {
+        const sectionElement = document.getElementById(sectionId + '-section');
+        if (!sectionElement) return;
+
+        const isCancelled = sectionElement.classList.toggle('cancelled');
+        
+        // מציאת כל שדות הקלט בתוך הקטגוריה
+        const inputFields = sectionElement.querySelectorAll('input[type="text"], textarea');
+        
+        inputFields.forEach(input => {
+            if (isCancelled) {
+                input.value = '';
+                input.setAttribute('disabled', 'true');
+            } else {
+                input.removeAttribute('disabled');
+            }
+        });
+    }
+
+    // פונקציה לרינדור דינמי של שדות הקלט
+    function renderDynamicContent() {
+        const dynamicSection = document.getElementById('dynamic-content-section');
+        const mainTitleElement = document.getElementById('main-form-title');
+
+        if (!dynamicSection || !activeConfig) {
+            dynamicSection.innerHTML = '<p class="text-red-500">שגיאת טעינת תצורה. אנא ודא/י את פרמטר ה-URL.</p>';
+            return;
+        }
+
+        mainTitleElement.textContent = activeConfig.title;
+
+        let html = '';
+        activeConfig.fields.forEach(field => {
+            // יצירת מכולה לכל קטגוריה עם ID ייחודי
+            const sectionId = field.id;
+            const labelText = `${field.label} (מקסימום ${field.maxLen} תווים לשורה):`;
+
+            // כפתור ביטול
+            const clearButton = `<button type="button" onclick="clearSection('${sectionId}')" class="clear-button">🗑️ בטל</button>`;
+
+            // אם שדה רב-שורתי (TextArea)
+            if (field.isTextArea) {
+                html += `
+                <div id="${sectionId}-section" class="border border-transparent hover:border-gray-100 p-2 rounded-lg transition duration-150">
+                    <div class="flex justify-between items-center mb-1">
+                        <label for="${sectionId}" class="block text-sm font-medium text-gray-300">${labelText}</label>
+                        ${clearButton}
+                    </div>
+                    <div class="form-group mb-6">
+                        <textarea id="${sectionId}" class="input-style" rows="${field.lines}" maxlength="${field.maxLen}" placeholder="הקלד כאן..." ${field.defaultValue ? `value="${field.defaultValue}"` : ''}></textarea>
+                    </div>
+                </div>`;
+            } else {
+                // שדות קלט רגילים (Input type="text") - שורה אחת או יותר
+                html += `
+                <div id="${sectionId}-section" class="border border-transparent hover:border-gray-100 p-2 rounded-lg transition duration-150">
+                    <div class="flex justify-between items-center mb-1">
+                        <label for="${sectionId}-line1" class="block text-sm font-medium text-gray-300">${labelText}</label>
+                        ${clearButton}
+                    </div>`;
+
+                for (let i = 1; i <= field.lines; i++) {
+                    const lineId = `${sectionId}-line${i}`;
+                    const placeholder = i > 1 ? `שורה ${i}` : 'הקלד כאן...';
+                    const initialValue = field.defaultValue && i === 1 ? field.defaultValue : '';
+                    const extraClasses = field.isBold ? 'font-bold text-lg' : '';
+                    const sectionClass = (field.maxLen === 30) ? 'section-input-style' : '';
+
+                    html += `
+                        <div class="form-group mb-2 ${i === field.lines ? 'mb-4' : ''}">
+                            <input type="text" id="${lineId}" class="input-style ${extraClasses} ${sectionClass}" 
+                                placeholder="${i > 1 ? '' : placeholder}" 
+                                value="${initialValue}" maxlength="${field.maxLen}" required>
+                        </div>
+                    `;
+                }
+                html += `</div>`; // סגירת sectionId-section
+            }
+        });
+        dynamicSection.innerHTML = html;
+        setupEnterKeyNavigation(); // הפעלת ניווט מחדש לאחר רינדור
+    }
+    
+    // פונקציה לאיסוף הנתונים מהטופס וייצואם כקובץ טקסט
+    function saveFormAsText() {
+        const fixedBroadcastDate = document.getElementById('fixed-broadcast-date').textContent;
+        const editionName = document.getElementById('edition-name').value;
+        
+        let textContent = `נושא: ${activeConfig.title} (מהדורת ${fixedBroadcastDate})
+----------------------------------------
+פרטי הזמנה:
+שם השולח/כתב: ${document.getElementById('sender-name').value || '[לא מולא]'}
+שם המהדורה: ${editionName || '[לא מולא]'}
+תאריך שידור: ${fixedBroadcastDate}
+שעת שידור משוערת: ${document.getElementById('fixed-estimated-time').textContent}
+----------------------------------------
+קבצים מצורפים (סמן ב-X אם רלוונטי):
+${Array.from(document.querySelectorAll('.attachment-checkbox')).map(checkbox => checkbox.checked ? `[X] ${checkbox.nextElementSibling.textContent}` : `[ ] ${checkbox.nextElementSibling.textContent}`).join('\n')}
+----------------------------------------
+תוכן הגרפיקה (נא למלא במדויק):
+\n`;
+
+        activeConfig.fields.forEach(field => {
+            const sectionId = field.id;
+            const sectionElement = document.getElementById(sectionId + '-section');
+            
+            textContent += `${field.label}:\n`;
+
+            if (sectionElement && sectionElement.classList.contains('cancelled')) {
+                textContent += `[מבוטל]\n`;
+                return;
+            }
+
+            if (field.isTextArea) {
+                const value = document.getElementById(sectionId).value.trim();
+                textContent += `${value || '[לא מולא]'}\n\n`;
+            } else {
+                let sectionContent = [];
+                for (let i = 1; i <= field.lines; i++) {
+                    const lineId = `${sectionId}-line${i}`;
+                    const input = document.getElementById(lineId);
+                    if (input && input.value.trim()) {
+                        sectionContent.push(input.value.trim());
+                    }
+                }
+                textContent += `${sectionContent.join('\n') || '[לא מולא]'}\n\n`;
+            }
+        });
+
+        textContent += `----------------------------------------
+הערות נוספות לגרפיקאי (צבעים/סגנון/דגשים):
+${document.getElementById('notes').value || '[אין הערות]'}
+`;
+
+        // יצירת קובץ טקסט והורדתו
+        const filename = `טופס_הזמנה_${editionName || 'חדש'}_${fixedBroadcastDate}.txt`;
+        const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // פונקציה להחלפת מצב תצוגה
+    function toggleDarkMode() {
+        const body = document.body;
+        const toggleButton = document.querySelector('.mode-toggle-button');
+        
+        // ההיגיון כאן הפוך: כשהמצב כהה (body.classList.contains('light-mode') == false), אנחנו מציגים את הלובי.
+        // כשלוחצים, אנחנו עוברים למצב בהיר.
+        
+        const isCurrentlyLight = body.classList.toggle('light-mode');
+        
+        // שמירת ההעדפה של המשתמש
+        localStorage.setItem('darkMode', isCurrentlyLight ? 'disabled' : 'enabled');
+
+        // עדכון כפתור ה-Toggle
+        toggleButton.textContent = isCurrentlyLight ? '🌗 מצב לילה' : '☀️ מצב יום';
+    }
+
+    // הפעלה אוטומטית של מצב כהה אם נשמר ב-localStorage
+    function applySavedMode() {
+        const body = document.body;
+        const toggleButton = document.querySelector('.mode-toggle-button');
+        const savedMode = localStorage.getItem('darkMode');
+        
+        if (savedMode === 'disabled') {
+            // אם המשתמש שמר מצב בהיר, נעבור למצב בהיר (שאינו ברירת המחדל)
+            body.classList.add('light-mode');
+            toggleButton.textContent = '🌗 מצב לילה';
+        } else {
+            // אם המשתמש שמר מצב כהה, או שלא שמר כלום, נשאר במצב ברירת המחדל (כהה)
+             toggleButton.textContent = '☀️ מצב יום';
+        }
+        
+        // תיקון צבע הכפתורים עבור מצב בהיר/כהה דינמי (כי Tailwind לא יודע על ה-JS)
+        if (body.classList.contains('light-mode')) {
+             toggleButton.classList.remove('bg-gray-600', 'hover:bg-gray-500', 'text-white');
+             toggleButton.classList.add('bg-gray-200', 'hover:bg-gray-300', 'text-gray-700');
+
+             document.querySelector('.action-button').classList.remove('text-white');
+             document.querySelector('.action-button').classList.add('text-black');
+
+        } else {
+             toggleButton.classList.add('bg-gray-600', 'hover:bg-gray-500', 'text-white');
+             document.querySelector('.action-button').classList.remove('text-black');
+             document.querySelector('.action-button').classList.add('text-white');
+        }
+    }
+
+    // טעינת תצורה ראשונית מה-URL
+    function loadInitialConfig() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const templateId = urlParams.get('template');
+        
+        if (templateId && templateConfigs[templateId]) {
+            activeConfig = templateConfigs[templateId];
+            document.title = activeConfig.title;
+        }
+        renderDynamicContent();
+    }
+    
+    // הפעלת עדכון השעה והתאריך כל שנייה, והחלת מצב שמור בעת טעינה
+    window.onload = function() {
+        loadInitialConfig();
+        applySavedMode();
+        updateLiveDateTime();
+        setInterval(updateLiveDateTime, 1000);
+    };
+</script>
+
+</body>
+</html>
