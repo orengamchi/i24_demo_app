@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ממשק לובי | מערכת גרפיקה i24NEWS</title>
+    <!-- טעינת Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- טעינת Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // הגדרת משתנים גלובליים לשימוש בתוך <script>
+        window.firebase = { initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, doc, setLogLevel };
+    </script>
+    <style>
+        :root {
+            --bg-dark: #0f172a; /* Slate 900 - רקע כללי של האפליקציה */
+            --primary-blue: #3b82f6; /* Blue 500 */
+            --text-light: #f1f5f9; /* Slate 100 */
+            --card-bg: #1e293b; /* Slate 800 */
+            --card-hover: #334155; /* Slate 700 */
+            --border-color: #475569; /* Slate 600 - נוסף לטופס */
+            --header-strip-height: 40px; /* גובה סרגל הקיצורים */
+        }
+        body {
+            font-family: 'Heebo', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            padding-top: var(--header-strip-height); /* מרווח בשביל סרגל הקיצורים */
+        }
+
+        /* סגנון לבאנר הווידאו */
+        .video-banner-container {
+            position: relative;
+            height: 300px; /* גובה הבאנר */
+            overflow: hidden;
+            background-color: #0d1222; /* רקע למקרה שהווידאו לא נטען */
+        }
+        /* מיקום הבאנר מתחת לסרגל הקיצורים */
+        #dynamic-banner-container {
+            margin-top: calc(-1 * var(--header-strip-height));
+        }
+
+        .video-banner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            z-index: 0;
+            transform: translate(-50%, -50%);
+            object-fit: cover; /* מוודא שהווידאו ממלא את כל השטח */
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4); /* שכבת הצללה לשיפור קריאות הטקסט */
+            z-index: 1;
+        }
+
+        .video-content {
+            position: relative;
+            z-index: 2; /* מוודא שהטקסט מעל הכל */
+        }
+
+        /* סגנונות לכרטיסי המגישים/מהדורות */
+        .card-image-wrapper {
+            position: relative;
+            height: 200px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0f172a 0%, #173b88 100%);
+        }
+        .template-image-wrapper {
+            position: relative;
+            height: 120px; 
+            width: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0f172a 0%, #173b88 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* שכבת-על עם אנימציית ה-shine */
+        .card-image-wrapper::after, 
+        .template-image-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                135deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.1) 40%, 
+                rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 60%, 
+                rgba(255, 255, 255, 0) 100%
+            );
+            transform: translateX(-100%) translateY(-100%) rotate(45deg); 
+            transition: transform 0.5s ease;
+            mix-blend-mode: soft-light;
+            z-index: 10;
+        }
+        .presenter-card:hover .card-image-wrapper::after,
+        .template-card:hover .template-image-wrapper::after {
+            transform: translateX(100%) translateY(100%) rotate(45deg);
+            transition: transform 1.2s ease;
+        }
+
+        /* סגנון התמונה בתוך ה-wrapper */
+        .card-image {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center top; 
+            opacity: 0.85; 
+            transition: opacity 0.3s ease;
+        }
+        .presenter-card:hover .card-image {
+            opacity: 1; /* הבהרת התמונה ב-hover */
+        }
+
+        /* שיפור גודל האייקון בתוך התבניות */
+        .template-icon {
+            width: 48px; /* קטן יותר */
+            height: 48px;
+            color: white;
+            opacity: 0.9;
+        }
+        
+        /* *** אפקטי ריחוף משופרים לכל הכרטיסים *** */
+        .presenter-card, .template-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .presenter-card:hover, .template-card:hover {
+            transform: scale(1.04) translateY(-8px) !important; /* גדילה מודגשת והרמה */
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5); /* צל חזק יותר */
+        }
+        /* ****************************************** */
+
+        /* סגנון כפתור חזרה מודגש */
+        .back-btn {
+            @apply flex items-center text-gray-300 hover:text-primary-blue transition duration-200 mb-6 font-semibold;
+            line-height: 1.25;
+        }
+        .back-btn svg {
+            color: var(--primary-blue);
+        }
+
+        /* יתר הסגנונות הקיימים */
+        .template-card {
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .text-i24 {
+            color: #ffffff;
+        }
+        .bg-i24-header {
+            background-color: #0d1222;
+        }
+        .btn-primary {
+            background-color: var(--primary-blue);
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+
+        /* ************************************************************ */
+        /* סגנונות טופס (נלקחו מ-template_bullets.html והוטמעו כאן) */
+        /* ************************************************************ */
+
+        /* הגדרות לטופס במצב כהה (ברירת מחדל) */
+        .order-form {
+            background-color: var(--card-bg); /* רקע הכרטיס */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+        }
+        .form-section-title { 
+            @apply text-2xl font-bold pb-2 mb-4 border-b border-opacity-50;
+        }
+        .input-style { 
+            /* סגנונות בסיס של Tailwind לשדות קלט */
+            @apply w-full p-2.5 rounded-lg border focus:outline-none transition duration-200; 
+            background-color: #334155; /* Slate 700 - שדה קלט כהה */
+            border-color: var(--border-color);
+            color: var(--text-light); 
+        }
+        .input-style:focus { 
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); 
+        }
+        .readonly-info { 
+            background-color: #0f172a !important; 
+            border-color: var(--border-color) !important;
+            color: var(--text-light) !important;
+        }
+        .clear-button { @apply px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-lg hover:bg-red-600 transition duration-150; }
+        .cancelled input[type="text"], .cancelled .input-style { background-color: #581c1c !important; border-color: #ef4444 !important; opacity: 0.6; text-decoration: line-through; color: #fca5a5; }
+        .section-input-style { max-width: 80%; margin-right: auto; margin-left: auto; }
+        
+        /* מצב בהיר - רקע כללי */
+        .light-mode body {
+            background-color: #f1f5f9; 
+            color: #0f172a;
+            background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+        }
+        .light-mode .order-form {
+            background-color: #ffffff; 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .light-mode .form-section-title { 
+            color: #1e3a8a; 
+            border-bottom-color: #94a3b8; 
+        }
+        .light-mode .input-style {
+            background-color: #f8fafc; 
+            border-color: #cbd5e1; 
+            color: #0f172a;
+        }
+        .light-mode .readonly-info { 
+            background-color: #e2e8f0 !important; 
+            border-color: #cbd5e1 !important;
+            color: #1e293b !important;
+        }
+        .light-mode .cancelled input[type="text"], .light-mode .cancelled .input-style { background-color: #fdd !important; border-color: #f00 !important; color: #721c24; }
+        
+        /* סרגל קיצורים עליון */
+        #shortcut-strip {
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: var(--header-strip-height);
+            background-color: #0d1222; /* כמעט שחור */
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+            white-space: nowrap;
+            padding: 0 16px;
+        }
+        
+        /* סגנון ה-Dropdown החדש */
+        .dropdown-button {
+            @apply flex items-center h-full text-white bg-transparent hover:bg-gray-800 px-4 transition-colors duration-200 font-bold;
+        }
+        .dropdown-menu {
+            /* ** השינוי כאן: יישור לימין, ומטה ** */
+            @apply absolute top-full right-0 mt-0 py-2 w-64 bg-card-bg rounded-lg shadow-xl z-50 border border-gray-700 flex flex-col; 
+        }
+        .dropdown-item {
+            @apply block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 w-full text-right transition-colors duration-150;
+            font-weight: 500;
+            border-right: 4px solid transparent; /* הוספת פס צבע בצד ימין */
+        }
+        .dropdown-item:hover {
+            border-right-color: currentColor;
+        }
+
+
+    </style>
+</head>
+<body class="min-h-screen">
+    
+    <!-- ****************************** סרגל קיצורים עליון (Dropdown) ****************************** -->
+    <div id="shortcut-strip" class="flex justify-start items-center relative">
+        <div class="group h-full flex items-center relative">
+            <button id="show-dropdown-btn" class="dropdown-button">
+                <span>בחירת מהדורה</span>
+                <svg class="w-4 h-4 mr-1.5 transition-transform duration-200 group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            <div id="show-dropdown-menu" class="dropdown-menu hidden">
+                <!-- פריטי המהדורות ירונדרו כאן -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ****************************** באנר וידאו עליון (מנוהל ע"י JS) ****************************** -->
+    <div id="dynamic-banner-container" class="video-banner-container">
+        <!-- אלמנט הווידאו -->
+        <video id="banner-video" autoplay muted loop class="video-banner">
+            <source id="banner-video-source" src="" type="video/mp4">
+        </video>
+
+        <div class="video-overlay"></div>
+
+        <!-- כותרת עליונה - ממוקמת מעל הווידאו -->
+        <header class="shadow-lg p-4 relative z-10 video-content">
+            <div class="max-w-7xl mx-auto flex justify-between items-center text-white">
+                <h1 class="text-3xl font-bold tracking-wide">
+                    מערכת שיגור גרפיקה | <span class="text-xs font-light block">i24NEWS Production</span>
+                </h1>
+                <div id="user-info" class="text-sm font-medium">
+                    <!-- פרטי משתמש -->
+                </div>
+            </div>
+        </header>
+
+        <!-- כותרות מרכזיות של הבאנר -->
+        <div class="video-content absolute inset-0 flex items-center justify-center p-8">
+            <div id="banner-titles" class="text-center">
+                <h2 id="banner-title" class="text-5xl font-extrabold text-white mb-2 shadow-text-lg"></h2>
+                <p id="banner-subtitle" class="text-xl text-gray-200"></p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- מכולה ראשית -->
+    <main class="max-w-7xl mx-auto p-4 md:p-8">
+
+        <!-- ****************************** 1. מסך הלובי: בחירת מהדורה ****************************** -->
+        <div id="lobby-view" class="space-y-8 mt-6">
+            <div id="presenters-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- הכרטיסים יטענו כאן באמצעות JavaScript -->
+            </div>
+        </div>
+        
+        <!-- ****************************** 2. מסך לובי התבניות: בחירת תבנית ****************************** -->
+        <div id="template-lobby-view" class="hidden space-y-8">
+            <button onclick="window.app.showLobby()" class="back-btn group">
+                <svg class="h-6 w-6 ml-2 transform rotate-180 transition-transform duration-300 group-hover:-translate-x-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 8 8 12 12 16"></polyline>
+                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+                חזור לבחירת מהדורה
+            </button>
+            <div id="templates-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <!-- הכרטיסים יטענו כאן באמצעות JavaScript -->
+            </div>
+        </div>
+        
+        <!-- ****************************** 3. מסך טופס בולטים (הטופס המוטמע) ****************************** -->
+        <div id="bullets-form-view" class="hidden space-y-8">
+            <button onclick="window.app.showTemplateLobby()" class="back-btn group">
+                <svg class="h-6 w-6 ml-2 transform rotate-180 transition-transform duration-300 group-hover:-translate-x-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 8 8 12 12 16"></polyline>
+                    <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+                חזור לבחירת תבנית
+            </button>
+
+            <!-- מבנה הטופס המלא שהועתק -->
+            <div id="form-container" class="max-w-3xl mx-auto p-6 sm:p-8 rounded-xl shadow-2xl order-form">
+                
+                <header class="text-center mb-6 flex justify-between items-center flex-wrap gap-4">
+                    <h1 id="main-form-title" class="3xl sm:text-4xl font-extrabold text-white mb-1">
+                        📝 טופס הזמנה - בולטים
+                    </h1>
+                    <div class="flex space-x-2 space-x-reverse">
+                        <button onclick="saveFormAsText()" class="action-button text-sm bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg px-4 py-2">
+                            💾 שמור כקובץ טקסט (.txt)
+                        </button>
+                        <button onclick="toggleDarkMode()" class="mode-toggle-button text-sm bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg px-4 py-2">
+                            ☀️ מצב יום
+                        </button>
+                    </div>
+                </header>
+                <p id="live-datetime" class="text-gray-400 text-sm mb-6 text-center"></p>
+                
+                <form id="orderForm">
+
+                    <!-- פרטי הזמנה קבועים -->
+                    <div id="order-details-container" class="mb-8 p-4 border border-border-color rounded-lg">
+                        <h2 class="form-section-title">פרטי הזמנה</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="form-group">
+                                <label for="sender-name" class="block text-sm font-medium text-gray-300 mb-1">שם השולח/כתב:</label>
+                                <input type="text" id="sender-name" class="input-style" placeholder="הקלד כאן" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="edition-name" class="block text-sm font-medium text-gray-300 mb-1">שם המהדורה:</label>
+                                <input type="text" id="edition-name" class="input-style" placeholder="הקלד כאן" required>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mt-4">
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-300 mb-1">תאריך שידור קבוע:</label>
+                                <div class="input-style readonly-info bg-gray-100 text-gray-600 font-semibold cursor-default" id="fixed-broadcast-date"></div>
+                            </div>
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-300 mb-1">שעת שידור משוערת קבועה:</label>
+                                <div class="input-style readonly-info bg-gray-100 text-gray-600 font-semibold cursor-default" id="fixed-estimated-time"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- קבצים מצורפים קבועים -->
+                    <div id="attachments-container" class="mb-8 p-4 border border-border-color rounded-lg">
+                        <h2 class="form-section-title">קבצים מצורפים (סמן אם רלוונטי)</h2>
+                        <div class="flex flex-wrap gap-4 items-center justify-between">
+                            <div class="flex items-center space-x-2 space-x-reverse">
+                                <input type="checkbox" id="audio-file" data-label="קובץ אודיו (קריינות לגרפיקה)" class="attachment-checkbox h-4 w-4 text-blue-500 border-gray-600 rounded focus:ring-blue-500">
+                                <label for="audio-file" class="block text-sm text-gray-300">קובץ אודיו (קריינות לגרפיקה)</label>
+                            </div>
+                            <div class="flex items-center space-x-2 space-x-reverse">
+                                <input type="checkbox" id="image-file" data-label="תמונה (רקע או אילוסטרציה)" class="attachment-checkbox h-4 w-4 text-blue-500 border-gray-600 rounded focus:ring-blue-500">
+                                <label for="image-file" class="block text-sm text-gray-300">תמונה (רקע או אילוסטרציה)</label>
+                            </div>
+                            <div class="flex items-center space-x-2 space-x-reverse">
+                                <input type="checkbox" id="video-file" data-label="קובץ וידאו" class="attachment-checkbox h-4 w-4 text-blue-500 border-gray-600 rounded focus:ring-blue-500">
+                                <label for="video-file" class="block text-sm text-gray-300">קובץ וידאו</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ***** תוכן גרפיקה (דינמי) ***** -->
+                    <div id="dynamic-content-section" class="mb-8 p-4 border border-border-color rounded-lg">
+                        <h2 class="form-section-title">תוכן הגרפיקה (נא למלא במדויק)</h2>
+                        <!-- השדות ירונדרו כאן על ידי JavaScript בהתאם לתבנית -->
+                    </div>
+
+                    <!-- הערות נוספות - רוחב מלא, גובה 4 שורות, מוגבל ל-300 תווים -->
+                    <div id="notes-container" class="p-4 rounded-lg">
+                        <h2 class="form-section-title">הערות נוספות לגרפיקאי (צבעים/סגנון/דגשים)</h2>
+                        <div class="form-group">
+                            <label for="notes" class="block text-sm font-medium text-gray-300 sr-only">הערות נוספות</label>
+                            <textarea id="notes" class="input-style" rows="4" maxlength="300" placeholder="הקלד כאן הערות מיוחדות, דגשים על צבעים או סגנון גרפי רצוי... (מקסימום 300 תווים)"></textarea>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- זכויות יוצרים -->
+                <footer class="mt-8 text-center text-xs text-gray-500">
+                    &copy; OREN GAMCHI
+                </footer>
+
+            </div>
+        </div>
+
+        <!-- ****************************** תצוגת הבקשות הפעילות ****************************** -->
+        <div id="active-requests-view" class="mt-12 pt-6 border-t border-gray-700/50">
+            <h2 class="text-3xl font-bold mb-6 text-i24">תיעוד שיגורים אחרונים</h2>
+            <div id="requests-list" class="space-y-4">
+                <p class="text-gray-400">טוען תיעוד שיגורים...</p>
+            </div>
+        </div>
+
+    </main>
+    
+    <!-- פוטר עם זכויות יוצרים -->
+    <footer class="p-4 mt-8 border-t border-gray-700/50 text-center text-sm text-gray-500">
+        <span class="flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8zm0-4c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm0-6c-1.105 0-2 .895-2 2s.895 2 2 2 2-.895 2-2-.895-2-2-2z"></path></svg>
+            &copy; 2025 OREN GAMCHI
+        </span>
+    </footer>
+
+    <!-- לוגיקת האפליקציה והאינטגרציה עם Firebase -->
+    <script>
+        // הגדרות קבועות
+        const DEFAULT_VIDEO = "https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/start%20here.mp4";
+        const TEMPLATE_VIDEO = "https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/were%20here.mp4";
+        const FALLBACK_VIDEO = "https://cdn.glitch.me/c005470d-f217-4835-8025-b54191d8e126/Breaking_News_HD.mp4";
+        
+        // בדיקה אם המשתנים הגלובליים זמינים (מסופקים על ידי Canvas)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // ** כתובת בסיס לטפסי GitHub החיצוניים (לא בשימוש עבור בולטים) **
+        const TEMPLATE_FORM_BASE_URL = "https://your-github-repo.com/forms/template_"; 
+
+
+        // ************************************************************
+        // ********* נתוני תצורה וצבעים (נוסף צבע לכל מהדורה) *********
+        // ************************************************************
+
+        const SHOW_COLORS = {
+            'main_edition': '#ef4444',     // אדום (המהדורה המרכזית)
+            'friday_cabinet': '#f97316',   // כתום (קבינט שישי)
+            'saturday_magazine': '#22c55e',// ירוק (מגזין השבת)
+            'early_edition': '#eab308',    // צהוב (המוקדמת)
+            'gilboa_index': '#6366f1',     // אינדיגו (מדד גלבוע)
+            'five_edition': '#8b5cf6',     // סגול (מהדורת חמש)
+            'arabists': '#ec4899',         // ורוד (הערביסטים)
+            'israelis_show': '#3b82f6',    // כחול (הישראלים)
+            'talking_news': '#06b6d4',     // ציאן (מדברים חדשות)
+            'noon_edition': '#10b981',      // אזמרגד (מהדורת צהריים)
+            'flash_newsroom': '#f43f5e'     // ורוד כהה (חדר החדשות)
+        };
+        
+        const templateConfigs = {
+            'Bullets': {
+                title: 'טופס הזמנה - בולטים',
+                fields: [
+                    { id: 'main-title', label: 'כותרת ראשית', lines: 2, maxLen: 15, isBold: true, defaultValue: 'XVXVXVXVXVXV' },
+                    { id: 'subtitle', label: 'כותרת משנה', lines: 2, maxLen: 15, isBold: false, defaultValue: 'דכדכדכדכד' },
+                    { id: 'section1', label: 'סעיף 1', lines: 2, maxLen: 30, defaultValue: 'אני על זה עדיין' },
+                    { id: 'section2', label: 'סעיף 2', lines: 2, maxLen: 30, defaultValue: 'דכדכדכדכד' },
+                    { id: 'section3', label: 'סעיף 3', lines: 2, maxLen: 30, defaultValue: 'הזמן טקסט לקריינות.' },
+                ]
+            },
+            // ניתן להוסיף כאן תבניות נוספות בעתיד
+        };
+
+        let activeConfig = templateConfigs.Bullets; 
+        let currentShowData = null; // ישמור את נתוני המהדורה שנבחרה
+        
+        // ************************************************************
+        // ********* לוגיקת טופס גלובלית ******************************
+        // ************************************************************
+
+        window.clearSection = function(sectionId) {
+            const sectionElement = document.getElementById(sectionId + '-section');
+            if (!sectionElement) return;
+
+            const isCancelled = sectionElement.classList.toggle('cancelled');
+            
+            const inputFields = sectionElement.querySelectorAll('input[type="text"], textarea');
+            
+            inputFields.forEach(input => {
+                if (isCancelled) {
+                    input.value = '';
+                    input.setAttribute('disabled', 'true');
+                } else {
+                    input.removeAttribute('disabled');
+                }
+            });
+        }
+
+        window.toggleDarkMode = function() {
+            const body = document.body;
+            const toggleButton = document.querySelector('.mode-toggle-button');
+            
+            const isCurrentlyLight = body.classList.toggle('light-mode');
+            
+            localStorage.setItem('darkMode', isCurrentlyLight ? 'disabled' : 'enabled');
+
+            toggleButton.textContent = isCurrentlyLight ? '🌗 מצב לילה' : '☀️ מצב יום';
+            
+            // תיקון צבע הכפתורים עבור מצב בהיר/כהה דינמי
+            if (isCurrentlyLight) {
+                toggleButton.classList.remove('bg-gray-600', 'hover:bg-gray-500', 'text-white');
+                toggleButton.classList.add('bg-gray-200', 'hover:bg-gray-300', 'text-gray-700');
+
+                document.querySelector('.action-button').classList.remove('text-white');
+                document.querySelector('.action-button').classList.add('text-black');
+
+            } else {
+                toggleButton.classList.add('bg-gray-600', 'hover:bg-gray-500', 'text-white');
+                document.querySelector('.action-button').classList.remove('text-black');
+                document.querySelector('.action-button').classList.add('text-white');
+            }
+        }
+
+        window.saveFormAsText = function() {
+            const fixedBroadcastDate = document.getElementById('fixed-broadcast-date').textContent;
+            const editionName = document.getElementById('edition-name').value;
+            
+            let textContent = `נושא: ${activeConfig.title} (מהדורת ${editionName || '[לא מולא]'})
+----------------------------------------
+פרטי הזמנה:
+שם השולח/כתב: ${document.getElementById('sender-name').value || '[לא מולא]'}
+שם המהדורה: ${editionName || '[לא מולא]'}
+תאריך שידור: ${fixedBroadcastDate}
+שעת שידור משוערת: ${document.getElementById('fixed-estimated-time').textContent}
+----------------------------------------
+קבצים מצורפים (סמן ב-X אם רלוונטי):
+${Array.from(document.querySelectorAll('#bullets-form-view .attachment-checkbox')).map(checkbox => checkbox.checked ? `[X] ${checkbox.nextElementSibling.textContent}` : `[ ] ${checkbox.nextElementSibling.textContent}`).join('\n')}
+----------------------------------------
+תוכן הגרפיקה (נא למלא במדויק):
+\n`;
+
+            activeConfig.fields.forEach(field => {
+                const sectionId = field.id;
+                const sectionElement = document.getElementById(sectionId + '-section');
+                
+                textContent += `${field.label}:\n`;
+
+                if (sectionElement && sectionElement.classList.contains('cancelled')) {
+                    textContent += `[מבוטל]\n`;
+                    return;
+                }
+
+                if (field.isTextArea) {
+                    const value = document.getElementById(sectionId).value.trim();
+                    textContent += `${value || '[לא מולא]'}\n\n`;
+                } else {
+                    let sectionContent = [];
+                    for (let i = 1; i <= field.lines; i++) {
+                        const lineId = `${sectionId}-line${i}`;
+                        const input = document.getElementById(lineId);
+                        if (input && input.value.trim()) {
+                            sectionContent.push(input.value.trim());
+                        }
+                    }
+                    textContent += `${sectionContent.join('\n') || '[לא מולא]'}\n\n`;
+                }
+            });
+
+            textContent += `----------------------------------------
+הערות נוספות לגרפיקאי (צבעים/סגנון/דגשים):
+${document.getElementById('notes').value || '[אין הערות]'}
+`;
+
+            // יצירת קובץ טקסט והורדתו
+            const filename = `טופס_הזמנה_${editionName || 'חדש'}_${fixedBroadcastDate}.txt`;
+            const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function updateLiveDateTime() {
+            const now = new Date();
+            const dateOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+            
+            const dateString = now.toLocaleDateString('he-IL', dateOptions);
+            const timeString = now.toLocaleTimeString('he-IL', timeOptions);
+            
+            // עדכון התאריך והשעה בשדות הקבועים בטופס
+            const dateDisplay = document.getElementById('fixed-broadcast-date');
+            const timeDisplay = document.getElementById('fixed-estimated-time');
+            const liveDisplay = document.getElementById('live-datetime');
+
+            if(dateDisplay) dateDisplay.textContent = dateString;
+            if(timeDisplay) timeDisplay.textContent = timeString;
+            if(liveDisplay) liveDisplay.textContent = `שעה ותאריך נוכחיים: ${dateString} | ${timeString}`;
+        }
+        
+        function setupEnterKeyNavigation() {
+            // אוסף את כל שדות הקלט בטופס הדינמי, ובנוסף את השדות הקבועים והערות
+            const inputs = Array.from(document.querySelectorAll('#orderForm input[type="text"]:not([disabled]), #orderForm textarea:not([disabled])'));
+            
+            inputs.forEach((currentField, index) => {
+                currentField.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' && currentField.tagName !== 'TEXTAREA') {
+                        event.preventDefault();
+                        
+                        const nextIndex = index + 1;
+                        if (nextIndex < inputs.length) {
+                            const nextField = inputs[nextIndex];
+                            nextField.focus();
+                            if (nextField.tagName === 'TEXTAREA') {
+                                nextField.setSelectionRange(nextField.value.length, nextField.value.length);
+                            }
+                        } else {
+                            document.getElementById('notes').focus(); 
+                        }
+                    }
+                });
+            });
+        }
+
+        function renderDynamicContent() {
+            const dynamicSection = document.getElementById('dynamic-content-section');
+            const mainTitleElement = document.getElementById('main-form-title');
+
+            if (!dynamicSection || !activeConfig) {
+                dynamicSection.innerHTML = '<p class="text-red-500">שגיאת טעינת תצורה. אנא ודא/י את פרמטר ה-URL.</p>';
+                return;
+            }
+
+            // עדכון כותרת הטופס עם שם המהדורה
+            const showName = currentShowData ? currentShowData.name : '';
+            mainTitleElement.textContent = `${activeConfig.title} | ${showName}`;
+
+            let html = '';
+            activeConfig.fields.forEach(field => {
+                const sectionId = field.id;
+                const labelText = `${field.label} (מקסימום ${field.maxLen} תווים לשורה):`;
+
+                const clearButton = `<button type="button" onclick="clearSection('${sectionId}')" class="clear-button">🗑️ בטל</button>`;
+
+                if (field.isTextArea) {
+                    html += `
+                    <div id="${sectionId}-section" class="border border-transparent hover:border-gray-100 p-2 rounded-lg transition duration-150">
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="${sectionId}" class="block text-sm font-medium text-gray-300">${labelText}</label>
+                            ${clearButton}
+                        </div>
+                        <div class="form-group mb-6">
+                            <textarea id="${sectionId}" class="input-style" rows="${field.lines}" maxlength="${field.maxLen}" placeholder="הקלד כאן...">${field.defaultValue || ''}</textarea>
+                        </div>
+                    </div>`;
+                } else {
+                    html += `
+                    <div id="${sectionId}-section" class="border border-transparent hover:border-gray-100 p-2 rounded-lg transition duration-150">
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="${sectionId}-line1" class="block text-sm font-medium text-gray-300">${labelText}</label>
+                            ${clearButton}
+                        </div>`;
+
+                    for (let i = 1; i <= field.lines; i++) {
+                        const lineId = `${sectionId}-line${i}`;
+                        const placeholder = i > 1 ? `שורה ${i}` : 'הקלד כאן...';
+                        const initialValue = field.defaultValue && i === 1 ? field.defaultValue : '';
+                        const extraClasses = field.isBold ? 'font-bold text-lg' : '';
+                        const sectionClass = (field.maxLen === 30) ? 'section-input-style' : '';
+
+                        html += `
+                            <div class="form-group mb-2 ${i === field.lines ? 'mb-4' : ''}">
+                                <input type="text" id="${lineId}" class="input-style ${extraClasses} ${sectionClass}" 
+                                    placeholder="${i > 1 ? '' : placeholder}" 
+                                    value="${initialValue}" maxlength="${field.maxLen}" required>
+                            </div>
+                        `;
+                    }
+                    html += `</div>`; // סגירת sectionId-section
+                }
+            });
+            dynamicSection.innerHTML = html;
+            setupEnterKeyNavigation(); // הפעלת ניווט מחדש לאחר רינדור
+        }
+
+        // ************************************************************
+        // ********* לוגיקת הלובי (View Manager) **********************
+        // ************************************************************
+
+        if (firebaseConfig) {
+            
+            // 1. הוספת הפונקציה הגלובלית לניהול ה-Dropdown
+            window.app = {
+                toggleDropdown: function(event, hideOnly = false) {
+                    event.stopPropagation();
+                    const dropdownMenu = document.getElementById('show-dropdown-menu');
+                    
+                    if (!dropdownMenu) return;
+                    
+                    if (hideOnly) {
+                        dropdownMenu.classList.add('hidden');
+                        return;
+                    }
+                    dropdownMenu.classList.toggle('hidden');
+                },
+                // ... המשך הגדרת האובייקט app
+                db: null,
+                auth: null,
+                userId: null,
+                isAuthReady: false,
+                currentShow: null,
+                
+                shows: [
+                    { name: 'המהדורה המרכזית', presenter: 'מירי מיכאלי ודניאל רוט-אבנרי', role: 'א-ה 20:00 (משוער)', color: SHOW_COLORS.main_edition,
+                        img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%9E%D7%99%D7%A8%D7%99_%D7%9E%D7%99%D7%9B%D7%90%D7%9C%D7%99_%D7%92%D7%93%D7%95%D7%9C.png', showId: 'main_edition' },
+                    { name: 'קבינט שישי', presenter: 'נוה דרומי', role: 'שישי 19:53', color: SHOW_COLORS.friday_cabinet,
+                        img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A0%D7%95%D7%95%D7%94_%D7%93%D7%A8%D7%95%D7%9E%D7%99_%D7%92%D7%93%D7%95%D7%9C.png', showId: 'friday_cabinet' },
+                    { name: 'מגזין השבת', presenter: 'מיכל רבינוביץ׳', role: 'שבת 19:50', color: SHOW_COLORS.saturday_magazine,
+                        img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%9E%D7%99%D7%9B%D7%9C_%D7%A8%D7%91%D7%99%D7%A0%D7%95%D7%91%D7%99%D7%A5_THUMB.png', showId: 'saturday_magazine' },
+                    { name: 'המהדורה המוקדמת', presenter: 'שרון גל', role: 'א-ה 19:00', color: SHOW_COLORS.early_edition,
+                        img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A9%D7%A8%D7%95%D7%9F_%D7%92%D7%9C_THUMB.png', showId: 'early_edition' },
+                    { name: 'מדד גלבוע', presenter: 'ניב גלבוע', role: 'א-ה 18:00', color: SHOW_COLORS.gilboa_index,
+                        img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A0%D7%99%D7%91_%D7%92%D7%9C%D7%91%D7%95%D7%A2.png', showId: 'gilboa_index' },
+                    { name: 'מהדורת חמש', presenter: 'שרון ניסים', role: 'א-ה 17:00', color: SHOW_COLORS.five_edition,
+                        img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A9%D7%A8%D7%95%D7%9F_%D7%A0%D7%99%D7%A1%D7%99%D7%9D.png', showId: 'five_edition' },
+                    { name: 'הערביסטים', presenter: 'צבי יחזקאלי', role: 'חמישי ושבת 21:30', color: SHOW_COLORS.arabists,
+                        img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A6%D7%91%D7%99%D7%A7%D7%94_%D7%99%D7%97%D7%96%D7%A7%D7%9C%D7%99.png', showId: 'arabists' },
+                    { name: 'הישראלים', presenter: 'אורי קואל', role: 'מידי ערב אחרי המרכזית', color: SHOW_COLORS.israelis_show,
+                        img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%90%D7%95%D7%A8%D7%99_%D7%A7%D7%95%D7%95%D7%90%D7%9C.png', showId: 'israelis_show' },
+                    { name: 'מדברים חדשות', presenter: 'אלירז שדה', role: 'א-ה 23:00', color: SHOW_COLORS.talking_news,
+                        img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%90%D7%9C%D7%99%D7%A8%D7%96_%D7%A9%D7%93%D7%94.png', showId: 'talking_news' },
+                    { name: 'מהדורת צהריים', presenter: 'דניאל רוט-אבנרי', role: 'א-ה 12:00-15:00', color: SHOW_COLORS.noon_edition,
+                        img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%93%D7%A0%D7%99%D7%90%D7%9C_%D7%A8%D7%95%D7%98_%D7%92%D7%93%D7%95%D7%9C.png', showId: 'noon_edition', img_position: 'center top' },
+                    { name: 'חדר החדשות', presenter: 'צוות הכתבים', role: 'כל שעה עגולה', color: SHOW_COLORS.flash_newsroom,
+                        img: 'https://placehold.co/400x400/374151/f1f5f9?text=NEWS', showId: 'flash_newsroom' }
+                ],
+
+                templates: [
+                    { name: 'תבנית סטורי', id: 'Story', desc: 'גרפיקה ארוכה ומתחלפת לסיפור ויזואלי.', color: 'border-orange-500/70', 
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2z"></path><path d="M9 22V10"></path><path d="M15 22V8"></path><path d="M4 18h16"></path></svg>` },
+                    { name: 'תבנית מצגת', id: 'Presentation', desc: 'מספר שקפים עם מידע גרפי מובנה.', color: 'border-blue-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>` },
+                    { name: 'תבנית מאסטר', id: 'Master', desc: 'גרפיקת בסיס ראשית (Master Graphics).', color: 'border-red-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>` },
+                    { name: 'תבנית תמלול', id: 'Transcript', desc: 'הצגת ציטוט ארוך/תמלול על המסך.', color: 'border-green-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6H3"></path><path d="M21 12H3"></path><path d="M14 18H3"></path><path d="M20 18v-6"></path></svg>` },
+                    { name: 'תבנית סושיאל', id: 'SocialMedia', desc: 'תצוגה של עדכון מרשתות חברתיות (כמו ציוץ).', color: 'border-purple-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 0-12 0v8a6 6 0 0 0 12 0"></path><line x1="20" y1="20" x2="20" y2="4"></line></line></svg>` },
+                    { name: 'תבנית עיתון', id: 'Newspaper', desc: 'הדמיה של עמוד ראשי בעיתון.', color: 'border-yellow-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2z"></path><line x1="8" y1="2" x2="8" y2="22"></line><line x1="16" y1="2" x2="16" y2="22"></line><line x1="2" y1="7" x2="22" y2="7"></line><line x1="2" y1="13" x2="22" y2="13"></line></svg>` },
+                    { name: 'תבנית ציטוט', id: 'Quote', desc: 'ציטוט בולט מאדם רלוונטי.', color: 'border-indigo-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>` },
+                    { name: 'תבנית באנר', id: 'Banner', desc: 'פס כותרת רחב לאירוע מיוחד.', color: 'border-pink-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="16" width="18" height="3" rx="1"></rect><path d="M21 16V6c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v10"></path></svg>` },
+                    { name: 'תבנית בולטים', id: 'Bullets', desc: 'רשימת נושאים/נקודות.', color: 'border-teal-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg>` },
+                    { name: 'תחזית יומית', id: 'DailyForecast', desc: 'גרפיקת מזג אוויר יומית.', color: 'border-sky-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="M20 12h2"></path><path d="M2 12h2"></path><circle cx="12" cy="12" r="4"></circle><path d="M4.93 4.93l2.83 2.83"></path><path d="M16.24 16.24l2.83 2.83"></path><path d="M16.24 7.76l2.83-2.83"></path><path d="M4.93 19.07l2.83-2.83"></path></svg>` },
+                    { name: 'תבנית מפות', id: 'Maps', desc: 'מפה להצגת מיקומים ואירועים.', color: 'border-lime-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>` },
+                    { name: 'תבנית סקרים', id: 'Polls', desc: 'גרף המציג נתוני סקרים.', color: 'border-fuchsia-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line><line x1="3" y1="20" x2="21" y2="20"></line></svg>` },
+                    { name: 'קיר זכוכית', id: 'GlassWall', desc: 'מבנה גרפיקה למסך מגע באולפן.', color: 'border-amber-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="4" ry="4"></rect><line x1="12" y1="2" x2="12" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg>` },
+                    { name: 'כותרת תחתונה', id: 'LowerThird', desc: 'הצגת שמות ותפקידים.', color: 'border-zinc-500/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h16c1.1 0 2-.9 2-2v-4c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2z"></path><line x1="4" y1="12" x2="20" y2="12"></line></svg>` },
+                    { name: 'כותרת שוברות', id: 'BreakingNews', desc: 'פס אדום בוהק להצגת חדשות מתפרצות.', color: 'border-red-700/70',
+                        icon: `<svg class="template-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>` }
+                ],
+                
+                // 2. הפונקציה toggleDropdown הועברה לכאן
+                toggleDropdown: function(event, hideOnly = false) {
+                    event.stopPropagation();
+                    const dropdownMenu = document.getElementById('show-dropdown-menu');
+                    
+                    if (!dropdownMenu) return;
+                    
+                    if (hideOnly) {
+                        dropdownMenu.classList.add('hidden');
+                        return;
+                    }
+                    dropdownMenu.classList.toggle('hidden');
+                },
+
+
+                initFirebase: async function() {
+                    try {
+                        const { initializeApp, getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, getFirestore, setLogLevel } = window.firebase;
+                        
+                        setLogLevel('Debug');
+
+                        const app = initializeApp(firebaseConfig);
+                        this.auth = getAuth(app);
+                        this.db = getFirestore(app);
+
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(this.auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(this.auth);
+                        }
+
+                        onAuthStateChanged(this.auth, (user) => {
+                            this.userId = user ? user.uid : crypto.randomUUID();
+                            this.isAuthReady = true;
+                            this.updateHeaderBanner(DEFAULT_VIDEO, 'ברוכים הבאים למערכת הגרפיקה!', 'בחר מהדורה והמשך לטופס הרלוונטי ב-GitHub.');
+                            this.renderLobby();
+                            this.renderShortcutStrip(); // רינדור סרגל הקיצורים
+                            this.startRequestsListener();
+                            this.applySavedMode(); 
+                            updateLiveDateTime();
+                            setInterval(updateLiveDateTime, 1000);
+                        });
+
+                    } catch (error) {
+                        console.error("Firebase Initialization Error:", error);
+                        document.getElementById('user-info').textContent = 'שגיאת התחברות לשרת';
+                    }
+                },
+                
+                // חדש: רינדור סרגל הקיצורים כ-Dropdown
+                renderShortcutStrip: function() {
+                    const dropdownMenu = document.getElementById('show-dropdown-menu');
+                    const dropdownBtn = document.getElementById('show-dropdown-btn');
+
+                    if (!dropdownMenu || !dropdownBtn) return;
+
+                    const shortcutsHtml = this.shows.map(show => `
+                        <button class="dropdown-item" style="color: ${show.color};"
+                                onclick="window.app.selectShow('${show.name.replace(/'/g, "\\'")}', '${show.presenter.replace(/'/g, "\\'")}', '${show.showId}'); window.app.toggleDropdown(event, true);">
+                            ${show.name}
+                        </button>
+                    `).join('');
+                    dropdownMenu.innerHTML = shortcutsHtml;
+                    
+                    // הוספת Toggle ל-Dropdown
+                    dropdownBtn.addEventListener('click', window.app.toggleDropdown); // קורא לפונקציה מתוך app.
+                    
+                    // סגירת ה-Dropdown בלחיצה מחוץ לתפריט
+                    document.addEventListener('click', (event) => {
+                        if (!dropdownMenu.classList.contains('hidden') && !dropdownMenu.contains(event.target) && event.target !== dropdownBtn) {
+                            dropdownMenu.classList.add('hidden');
+                        }
+                    });
+                },
+
+                updateHeaderBanner: function(videoUrl, title, subtitle) {
+                    const videoSource = document.getElementById('banner-video-source');
+                    const videoElement = document.getElementById('banner-video');
+                    const titleElement = document.getElementById('banner-title');
+                    const subtitleElement = document.getElementById('banner-subtitle');
+
+                    if (videoSource) {
+                        videoSource.src = videoUrl;
+                        if (videoElement) {
+                            videoElement.load(); 
+                            videoElement.onerror = function() {
+                                videoSource.src = FALLBACK_VIDEO; 
+                                videoElement.load();
+                                videoElement.play();
+                            }
+                        }
+                    }
+                    if (titleElement) titleElement.textContent = title;
+                    if (subtitleElement) subtitleElement.textContent = subtitle;
+                },
+
+                // 3. בניית כרטיסי הלובי (שלב 1)
+                renderLobby: function() {
+                    const grid = document.getElementById('presenters-grid');
+                    if (!grid) return;
+                    grid.innerHTML = this.shows.map(show => {
+                        const position = show.img_position || 'center top'; 
+                        
+                        return `
+                        <div onclick="window.app.selectShow('${show.name.replace(/'/g, "\\'")}', '${show.presenter.replace(/'/g, "\\'")}', '${show.showId}')" 
+                             class="presenter-card bg-card-bg rounded-xl shadow-lg overflow-hidden cursor-pointer hover-lift" style="border-bottom-color: ${show.color}; border-bottom-width: 4px;">
+                            
+                            <div class="card-image-wrapper">
+                                <div class="card-image" 
+                                    style="background-image: url('${show.img}'); background-position: ${position};">
+                                </div>
+                            </div>
+
+                            <div class="p-4 space-y-1">
+                                <h3 class="text-xl font-bold text-i24">${show.name}</h3>
+                                <p class="text-gray-300 text-base">${show.presenter}</p>
+                                <p class="text-gray-500 text-sm">שעת שידור: ${show.role}</p>
+                                <button class="mt-2 text-primary-blue hover:text-white border border-primary-blue hover:bg-primary-blue text-sm font-semibold py-1.5 px-3 rounded-full transition duration-200">
+                                    בחר והמשך לתבניות
+                                </button>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                },
+                
+                // 4. בניית כרטיסי התבניות (שלב 2)
+                renderTemplateLobby: function() {
+                    const grid = document.getElementById('templates-grid');
+                    if (!grid) return;
+                    
+                    if (!this.currentShow) {
+                        grid.innerHTML = '<p class="text-red-400 text-center">אנא בחר מהדורה מהלובי הראשי כדי להציג את התבניות.</p>';
+                        return;
+                    }
+
+                    const currentShowName = this.currentShow.name; 
+
+                    grid.innerHTML = this.templates.map(template => `
+                        <button onclick="window.app.selectTemplate('${template.id}', '${currentShowName.replace(/'/g, "\\'")}')" 
+                            class="template-card text-right bg-card-bg rounded-xl shadow-lg cursor-pointer hover-lift border-b-4 ${template.color} overflow-hidden text-white">
+                            
+                            <div class="template-image-wrapper">
+                                ${template.icon}
+                            </div>
+                            
+                            <div class="p-4 space-y-1">
+                                <h3 class="text-base font-bold text-i24">${template.name}</h3>
+                                <p class="text-gray-400 text-xs">${template.desc}</p>
+                            </div>
+                        </button>
+                    `).join('');
+                },
+
+                // 5. בחירת מהדורה והצגת לובי התבניות
+                selectShow: function(showName, presenterName, showId) {
+                    const showData = this.shows.find(s => s.showId === showId) || { name: showName, presenter: presenterName, color: SHOW_COLORS.main_edition };
+                    
+                    // שמירת נתוני המהדורה
+                    this.currentShow = showData;
+                    currentShowData = showData; 
+                    
+                    // הדגשת הקיצור הנבחר ב-Dropdown
+                    const dropdownBtn = document.getElementById('show-dropdown-btn');
+                    if (dropdownBtn) {
+                        dropdownBtn.querySelector('span').textContent = showName;
+                        dropdownBtn.style.color = showData.color;
+                    }
+
+
+                    this.updateHeaderBanner(TEMPLATE_VIDEO, 
+                        'בחר תבנית גרפית', 
+                        `שיגור טופס עבור: ${showName} (מגיש: ${presenterName})`
+                    );
+
+                    this.renderTemplateLobby(); 
+                    this.showTemplateLobby();
+                },
+                
+                // 6. פתיחת הטופס החיצוני ב-GitHub / טופס מקומי
+                selectTemplate: function(templateId, showName) {
+                    let targetUrl;
+
+                    if (templateId === 'Bullets') {
+                        // פותחים את התצוגה הפנימית
+                        this.showBulletsForm(showName);
+                        targetUrl = 'Internal Form Display'; // לצורך תיעוד
+                    } else {
+                        // עבור כל שאר התבניות, פותחים קישור חיצוני
+                         targetUrl = `${TEMPLATE_FORM_BASE_URL}${templateId}.html?show=${encodeURIComponent(showName)}&reporter=${encodeURIComponent(this.userId)}`;
+                         
+                         // לוג ומעבר לחלון חדש
+                         this.logRequestLaunch(templateId, showName, targetUrl);
+                         window.open(targetUrl, '_blank');
+                         setTimeout(() => this.showLobby(), 1000); 
+                    }
+                    
+                    // תיעוד פתיחת הטופס (אם לא טופס חיצוני)
+                    if (targetUrl === 'Internal Form Display') {
+                        this.logRequestLaunch(templateId, showName, targetUrl);
+                    }
+                },
+                
+                // 6.5 ניהול תצוגת טופס בולטים
+                showBulletsForm: function(showName) {
+                    // עדכון באנר
+                    this.updateHeaderBanner(DEFAULT_VIDEO, 
+                        `${templateConfigs.Bullets.title} | ${showName}`, 
+                        `מהדורה: ${showName}`
+                    );
+                    
+                    // הסתרת כל התצוגות
+                    document.getElementById('lobby-view').classList.add('hidden');
+                    document.getElementById('template-lobby-view').classList.add('hidden');
+                    document.getElementById('active-requests-view').classList.add('hidden');
+                    
+                    // הצגת טופס הבולטים
+                    document.getElementById('bullets-form-view').classList.remove('hidden');
+
+                    // מילוי אוטומטי של שם המהדורה
+                    document.getElementById('edition-name').value = showName;
+                    
+                    // הטמעת צבע המהדורה בטופס
+                    const color = currentShowData ? currentShowData.color : SHOW_COLORS.main_edition;
+                    
+                    document.getElementById('order-details-container').style.borderColor = color;
+                    document.getElementById('attachments-container').style.borderColor = color;
+                    document.getElementById('dynamic-content-section').style.borderColor = color;
+                    
+                    // ודא שהאלמנטים קיימים לפני עדכון סגנון
+                    const titleElements = document.querySelectorAll('#bullets-form-view .form-section-title');
+                    titleElements.forEach(el => {
+                        el.style.color = color;
+                        el.style.borderBottomColor = color;
+                    });
+                    
+                    // רנדור התוכן הדינמי
+                    activeConfig = templateConfigs.Bullets;
+                    renderDynamicContent();
+                },
+
+                // 7. תיעוד שליחת קישור ל-Firestore
+                logRequestLaunch: async function(templateId, showName, externalUrl) {
+                    const { collection, addDoc, serverTimestamp } = window.firebase;
+                    if (!this.db || !this.isAuthReady) return;
+
+                    const logData = {
+                        show: showName,
+                        templateType: templateId,
+                        reporterId: this.userId,
+                        externalUrl: externalUrl,
+                        timestamp: serverTimestamp(),
+                        status: templateId === 'Bullets' ? 'טופס-פנימי-נפתח' : 'שיגור-טופס-חיצוני' 
+                    };
+
+                    const collectionPath = `/artifacts/${appId}/public/data/graphics_requests_log`;
+                    
+                    try {
+                        await addDoc(collection(this.db, collectionPath), logData);
+                        console.log(`Log saved for template launch: ${templateId}`);
+                    } catch (e) {
+                        console.error("Error logging request launch: ", e);
+                    }
+                },
+
+                // 8. ניהול תצוגות (לובי / תבניות)
+                showLobby: function() {
+                    this.updateHeaderBanner(DEFAULT_VIDEO, 'ברוכים הבאים למערכת הגרפיקה!', 'בחר מהדורה והמשך לטופס הרלוונטי ב-GitHub.');
+                    document.getElementById('template-lobby-view').classList.add('hidden');
+                    document.getElementById('bullets-form-view').classList.add('hidden');
+                    document.getElementById('lobby-view').classList.remove('hidden');
+                    document.getElementById('active-requests-view').classList.remove('hidden');
+                    
+                    // איפוס כפתור ה-Dropdown
+                    const dropdownBtn = document.getElementById('show-dropdown-btn');
+                    if (dropdownBtn) {
+                        dropdownBtn.querySelector('span').textContent = 'בחירת מהדורה';
+                        dropdownBtn.style.color = 'white';
+                    }
+                },
+
+                showTemplateLobby: function() {
+                    if (!this.currentShow) return this.showLobby();
+                    this.updateHeaderBanner(TEMPLATE_VIDEO, 'בחר תבנית גרפית', `שיגור טופס עבור: ${this.currentShow.name} (מגיש: ${this.currentShow.presenter})`);
+
+                    document.getElementById('lobby-view').classList.add('hidden');
+                    document.getElementById('bullets-form-view').classList.add('hidden');
+                    document.getElementById('template-lobby-view').classList.remove('hidden');
+                    document.getElementById('active-requests-view').classList.remove('hidden');
+                },
+                
+                applySavedMode: function() {
+                    const body = document.body;
+                    const toggleButton = document.querySelector('.mode-toggle-button');
+                    const savedMode = localStorage.getItem('darkMode');
+                    
+                    // ברירת מחדל: מצב כהה
+                    if (savedMode === 'disabled') {
+                        body.classList.add('light-mode');
+                    }
+                    
+                    const isCurrentlyLight = body.classList.contains('light-mode');
+                    if (toggleButton) {
+                        toggleButton.textContent = isCurrentlyLight ? '🌗 מצב לילה' : '☀️ מצב יום';
+
+                        // דאגה לצבעי הכפתורים גם בטעינה הראשונית
+                        if (isCurrentlyLight) {
+                            toggleButton.classList.remove('bg-gray-600', 'hover:bg-gray-500', 'text-white');
+                            toggleButton.classList.add('bg-gray-200', 'hover:bg-gray-300', 'text-gray-700');
+                        } else {
+                            toggleButton.classList.add('bg-gray-600', 'hover:bg-gray-500', 'text-white');
+                        }
+                    }
+                },
+
+                // 9. האזנה לבקשות פעילות בזמן אמת (משתמש בקולקציה של לוגים)
+                startRequestsListener: function() {
+                    if (!this.db || !this.isAuthReady) return;
+
+                    const { collection, query, orderBy, onSnapshot } = window.firebase;
+                    const collectionPath = `/artifacts/${appId}/public/data/graphics_requests_log`; 
+                    const q = query(collection(this.db, collectionPath), orderBy('timestamp', 'desc'));
+
+                    onSnapshot(q, (snapshot) => {
+                        const requestsList = document.getElementById('requests-list');
+                        if (!requestsList) return;
+
+                        let html = '';
+                        if (snapshot.empty) {
+                            html = '<p class="text-gray-500">אין תיעוד שיגורים אחרונים.</p>';
+                        } else {
+                            const docsToShow = snapshot.docs.slice(0, 10);
+                            
+                            docsToShow.forEach(doc => {
+                                const data = doc.data();
+                                const date = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString('he-IL') : 'מיד';
+                                
+                                let statusColor = data.status === 'טופס-פנימי-נפתח' ? 'bg-teal-600' : 'bg-gray-600'; 
+                                let statusText = data.status === 'טופס-פנימי-נפתח' ? 'טופס פנימי נפתח' : 'טופס חיצוני נפתח';
+
+                                html += `
+                                    <div class="bg-slate-800 p-4 rounded-lg shadow-md flex justify-between items-center transition duration-200 hover:ring-2 ring-primary-blue/50">
+                                        <div class="space-y-1">
+                                            <p class="text-lg font-bold text-i24">שיגור: ${data.templateType}</p>
+                                            <p class="text-sm text-gray-400"><strong>מהדורה:</strong> ${data.show}</p>
+                                            <p class="text-xs text-gray-500"><strong>מדווח:</strong> ${data.reporterId.substring(0, 8)}...</p>
+                                        </div>
+                                        <div class="flex flex-col items-end space-y-2">
+                                            <span class="text-xs font-semibold text-gray-400">${date}</span>
+                                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full text-white ${statusColor}">${statusText}</span>
+                                            <a href="${data.externalUrl}" target="_blank" class="text-xs text-primary-blue hover:underline">פתח קישור</a>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        }
+                        requestsList.innerHTML = html;
+                    }, (error) => {
+                        console.error("Firestore Listener Error: ", error);
+                        document.getElementById('requests-list').innerHTML = '<p class="text-red-500">שגיאה בטעינת תיעוד השיגורים.</p>';
+                    });
+                }
+            };
+
+            // התחלת האפליקציה לאחר טעינת הדף
+            document.addEventListener('DOMContentLoaded', () => {
+                window.app.initFirebase();
+            });
+
+        } else {
+            console.error("Firebase config is missing. Cannot initialize the application.");
+            document.getElementById('user-info').textContent = 'שגיאה: הגדרות Firebase חסרות.';
+        }
+    </script>
+</body>
+</html>
