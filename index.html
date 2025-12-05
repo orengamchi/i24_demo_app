@@ -246,7 +246,7 @@
             background-color: #0d1222; /* כמעט שחור */
             z-index: 100;
             box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-            white-space: nowrap;
+            /* ** הוסר white-space: nowrap; ** */
             padding: 0 16px;
         }
         
@@ -255,7 +255,7 @@
             @apply flex items-center h-full text-white bg-transparent hover:bg-gray-800 px-4 transition-colors duration-200 font-bold;
         }
         .dropdown-menu {
-            /* ** השינוי כאן: יישור לימין, ומטה ** */
+            /* ** יישור לימין, ומטה ** */
             @apply absolute top-full right-0 mt-0 py-2 w-64 bg-card-bg rounded-lg shadow-xl z-50 border border-gray-700 flex flex-col; 
         }
         .dropdown-item {
@@ -469,7 +469,9 @@
         // בדיקה אם המשתנים הגלובליים זמינים (מסופקים על ידי Canvas)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        // ** תיקון שגיאת סינטקס פוטנציאלית ב-initialAuthToken **
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
 
         // ** כתובת בסיס לטפסי GitHub החיצוניים (לא בשימוש עבור בולטים) **
         const TEMPLATE_FORM_BASE_URL = "https://your-github-repo.com/forms/template_"; 
@@ -863,6 +865,7 @@ ${document.getElementById('notes').value || '[אין הערות]'}
 
                     if (!dropdownMenu || !dropdownBtn) return;
 
+                    // ** הרינדור בונה את פריטי ה-Dropdown *בתוך* התפריט הנפתח **
                     const shortcutsHtml = this.shows.map(show => `
                         <button class="dropdown-item" style="color: ${show.color};"
                                 onclick="window.app.selectShow('${show.name.replace(/'/g, "\\'")}', '${show.presenter.replace(/'/g, "\\'")}', '${show.showId}'); window.app.toggleDropdown(event, true);">
@@ -907,6 +910,14 @@ ${document.getElementById('notes').value || '[אין הערות]'}
                 renderLobby: function() {
                     const grid = document.getElementById('presenters-grid');
                     if (!grid) return;
+                    this.shows.forEach(show => {
+                        const showId = show.showId;
+                        // ודא שהצבע קיים
+                        if (!show.color) {
+                            show.color = SHOW_COLORS[showId] || SHOW_COLORS.main_edition;
+                        }
+                    });
+
                     grid.innerHTML = this.shows.map(show => {
                         const position = show.img_position || 'center top'; 
                         
@@ -963,17 +974,18 @@ ${document.getElementById('notes').value || '[אין הערות]'}
 
                 // 5. בחירת מהדורה והצגת לובי התבניות
                 selectShow: function(showName, presenterName, showId) {
-                    const showData = this.shows.find(s => s.showId === showId) || { name: showName, presenter: presenterName, color: SHOW_COLORS.main_edition };
+                    // ** ודא שאנחנו מוצאים את האובייקט המלא כדי לקבל את הצבע **
+                    const showData = this.shows.find(s => s.showId === showId);
                     
                     // שמירת נתוני המהדורה
-                    this.currentShow = showData;
-                    currentShowData = showData; 
+                    this.currentShow = showData || { name: showName, presenter: presenterName, color: SHOW_COLORS.main_edition };
+                    currentShowData = this.currentShow; 
                     
                     // הדגשת הקיצור הנבחר ב-Dropdown
                     const dropdownBtn = document.getElementById('show-dropdown-btn');
                     if (dropdownBtn) {
                         dropdownBtn.querySelector('span').textContent = showName;
-                        dropdownBtn.style.color = showData.color;
+                        dropdownBtn.style.color = currentShowData.color;
                     }
 
 
