@@ -6,6 +6,8 @@
     <title>ממשק לובי | מערכת גרפיקה i24NEWS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
@@ -13,6 +15,8 @@
             --primary-blue: #3b82f6;
             --text-light: #f1f5f9;
             --card-bg: #1e293b;
+            --card-hover: #334155;
+            --border-color: #475569;
             --header-strip-height: 50px;
         }
         body {
@@ -22,7 +26,7 @@
             padding-top: var(--header-strip-height);
         }
 
-        /* סגנון וידאו */
+        /* --- וידאו באנר --- */
         .video-banner-container {
             position: relative;
             height: 300px;
@@ -46,29 +50,65 @@
         }
         .video-content { position: relative; z-index: 2; }
 
-        /* סגנון כרטיסים */
-        .card-image-wrapper { height: 200px; position: relative; overflow: hidden; }
-        .template-image-wrapper { height: 120px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        /* --- כרטיסים --- */
+        .card-image-wrapper { 
+            height: 200px; 
+            position: relative; 
+            overflow: hidden; 
+            background: linear-gradient(135deg, #0f172a 0%, #173b88 100%);
+        }
+        
+        /* גרדיאנט נוסף ל-THUMB */
+        .card-image-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.8) 100%);
+            z-index: 1;
+        }
+
+        .template-image-wrapper { 
+            height: 140px; 
+            position: relative; 
+            overflow: hidden; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            background: #0f172a;
+            transition: background 0.3s;
+        }
         
         .card-image {
             width: 100%; height: 100%; background-size: cover; background-position: center top;
-            transition: transform 0.5s ease;
+            transition: transform 0.5s ease; opacity: 0.9;
+            position: relative; z-index: 2;
         }
-        .presenter-card:hover .card-image { transform: scale(1.05); }
-        .template-icon { width: 48px; height: 48px; color: white; opacity: 0.9; }
+        .presenter-card:hover .card-image { transform: scale(1.05); opacity: 1; }
+        
+        /* אייקונים */
+        .geo-icon { 
+            font-size: 3rem; 
+            color: rgba(255,255,255,0.85); 
+            transition: transform 0.3s, color 0.3s;
+        }
+        .template-card:hover .geo-icon { 
+            transform: scale(1.1) rotate(5deg); 
+            color: #fff;
+        }
+        .disabled-card { opacity: 0.6; cursor: not-allowed !important; }
+        .disabled-card:hover { transform: none !important; box-shadow: none !important; }
 
-        /* סרגל עליון */
+        /* --- סרגל עליון --- */
         #shortcut-strip {
             position: fixed; top: 0; right: 0; left: 0;
             height: var(--header-strip-height);
-            background-color: #0f172a; /* צבע רקע אטום */
+            background-color: #0f172a;
             z-index: 1000;
             box-shadow: 0 2px 10px rgba(0,0,0,0.5);
             display: flex; align-items: center; padding-right: 1rem;
             border-bottom: 1px solid #334155;
         }
 
-        /* תפריט נפתח */
         .dropdown-menu {
             display: none;
             position: absolute;
@@ -95,7 +135,6 @@
         }
         .dropdown-item:hover { background-color: #334155; }
         
-        /* כפתור פתיחת תפריט */
         .menu-btn {
             display: flex; align-items: center; gap: 8px;
             color: white; font-weight: bold; cursor: pointer;
@@ -104,31 +143,69 @@
         }
         .menu-btn:hover { background-color: #334155; }
 
-        /* כללי */
-        .hidden { display: none !important; }
-        
-        /* מצב יום */
-        .light-mode { background-color: #f1f5f9; color: #0f172a; }
-        .light-mode .dropdown-menu { background-color: white; border-color: #cbd5e1; }
-        .light-mode .dropdown-item { color: #334155; border-bottom-color: #e2e8f0; }
-        .light-mode .dropdown-item:hover { background-color: #f1f5f9; }
-        .light-mode #shortcut-strip { background-color: white; border-bottom-color: #cbd5e1; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .light-mode .menu-btn { color: #0f172a; }
-        .light-mode .menu-btn:hover { background-color: #e2e8f0; }
-        
-        /* סגנונות טופס בסיסיים */
-        .input-style {
-            width: 100%; padding: 10px; border-radius: 6px;
-            background-color: #334155; border: 1px solid #475569; color: white;
-            margin-bottom: 10px;
+        /* --- סגנונות טופס --- */
+        .order-form {
+            background-color: var(--card-bg);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+            border-top-width: 4px;
         }
-        .light-mode .input-style { background-color: #f8fafc; border-color: #cbd5e1; color: #0f172a; }
+        .input-style, .select-style {
+            width: 100%; padding: 10px; border-radius: 6px;
+            background-color: #334155; border: 1px solid var(--border-color); color: white;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-style:focus, .select-style:focus { outline: none; border-color: var(--primary-blue); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); }
+        .readonly-info { background-color: #0f172a !important; cursor: default; }
+        
+        .section-input-style { max-width: 90%; margin: 0 auto; display: block; }
+        
+        .cancelled input[type="text"], .cancelled .input-style {
+            background-color: #451a1a !important;
+            border-color: #ef4444 !important;
+            text-decoration: line-through;
+            color: #fca5a5;
+        }
+
+        .hidden { display: none !important; }
+
+        /* --- מצב יום --- */
+        .light-mode { 
+            --bg-dark: #e0f2fe; 
+            --text-light: #0f172a; 
+            --card-bg: #ffffff; 
+            --card-hover: #f0f9ff; 
+            --border-color: #7dd3fc;
+        }
+        .light-mode body { 
+            background-image: linear-gradient(to right, #bae6fd 1px, transparent 1px), linear-gradient(to bottom, #bae6fd 1px, transparent 1px); 
+            background-size: 20px 20px; 
+        }
+        .light-mode .input-style, .light-mode .select-style { background-color: #f0f9ff; color: #0f172a; border-color: #bae6fd; }
+        .light-mode .readonly-info { background-color: #e0f2fe !important; }
+        .light-mode .dropdown-menu { background-color: white; border-color: #7dd3fc; }
+        .light-mode .dropdown-item { color: #0f172a; border-bottom-color: #e0f2fe; }
+        .light-mode .dropdown-item:hover { background-color: #e0f2fe; }
+        .light-mode #shortcut-strip { background-color: white; border-bottom-color: #7dd3fc; }
+        .light-mode .menu-btn { color: #0f172a; }
+        .light-mode .menu-btn:hover { background-color: #e0f2fe; }
+        .light-mode .video-overlay { background: rgba(255, 255, 255, 0.1); }
+        
+        /* אייקונים בקלטים */
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+        .light-mode input[type="date"]::-webkit-calendar-picker-indicator,
+        .light-mode input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(0);
+        }
         
     </style>
 </head>
 <body class="min-h-screen">
 
-    <!-- סרגל עליון עם תפריט -->
+    <!-- סרגל עליון -->
     <nav id="shortcut-strip">
         <div class="relative">
             <button onclick="toggleMenu(event)" class="menu-btn">
@@ -137,10 +214,7 @@
                 </svg>
                 <span>בחירת מהדורה</span>
             </button>
-            <!-- רשימת המהדורות (תפריט אנכי) -->
-            <div id="main-dropdown" class="dropdown-menu">
-                <!-- התוכן יוזרק כאן ע"י JS -->
-            </div>
+            <div id="main-dropdown" class="dropdown-menu"></div>
         </div>
     </nav>
 
@@ -151,8 +225,6 @@
         </video>
         <div class="video-overlay"></div>
         <div class="video-content flex flex-col justify-center items-center h-full text-center p-4">
-            <h1 class="text-4xl font-bold text-white mb-2 shadow-lg">מערכת שיגור גרפיקה</h1>
-            <p class="text-xl text-gray-200">i24NEWS Production</p>
             <div id="banner-titles" class="mt-4">
                 <h2 id="banner-title" class="text-3xl font-bold text-white"></h2>
                 <p id="banner-subtitle" class="text-lg text-gray-300"></p>
@@ -163,73 +235,158 @@
     <!-- תוכן ראשי -->
     <main class="max-w-7xl mx-auto p-4 md:p-8 relative z-10">
         
-        <!-- 1. מסך הלובי -->
+        <!-- 1. לובי מהדורות -->
         <div id="lobby-view" class="mt-6">
             <div id="presenters-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
         </div>
 
-        <!-- 2. מסך בחירת תבנית -->
+        <!-- 2. לובי תבניות -->
         <div id="template-lobby-view" class="hidden">
-            <button onclick="showLobby()" class="flex items-center text-gray-400 hover:text-blue-400 mb-6 font-bold transition">
-                <span class="text-xl ml-2">&#8594;</span> חזור לבחירת מהדורה
+            <button onclick="showLobby()" class="flex items-center text-gray-400 hover:text-blue-400 mb-6 font-bold transition group">
+                <span class="text-xl ml-2 transform group-hover:translate-x-1 transition-transform">&#8594;</span> חזור לבחירת מהדורה
             </button>
             <div id="templates-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div>
         </div>
 
-        <!-- 3. מסך טופס בולטים -->
+        <!-- 3. טופס בולטים -->
         <div id="bullets-form-view" class="hidden">
-            <button onclick="showTemplateLobby()" class="flex items-center text-gray-400 hover:text-blue-400 mb-6 font-bold transition">
-                <span class="text-xl ml-2">&#8594;</span> חזור לבחירת תבנית
+            <button onclick="showTemplateLobby()" class="flex items-center text-gray-400 hover:text-blue-400 mb-6 font-bold transition group">
+                <span class="text-xl ml-2 transform group-hover:translate-x-1 transition-transform">&#8594;</span> חזור לבחירת תבנית
             </button>
             
-            <div class="max-w-3xl mx-auto p-6 rounded-xl shadow-2xl bg-[#1e293b] border border-gray-700" id="form-card">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-white" id="main-form-title">טופס הזמנה</h2>
+            <div class="max-w-3xl mx-auto p-6 rounded-xl order-form" id="form-card">
+                <header class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+                    <h2 class="text-2xl font-bold text-white" id="main-form-title">📝 טופס הזמנה</h2>
                     <div class="flex gap-2">
-                        <button onclick="saveFormAsText()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-bold">שמור</button>
-                        <button onclick="toggleDarkMode()" class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded text-sm font-bold">יום/לילה</button>
+                         <button onclick="toggleDarkMode()" class="mode-toggle-button bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded text-sm font-bold shadow transition">☀️ יום/לילה</button>
                     </div>
-                </div>
+                </header>
+                <p id="live-datetime" class="text-gray-400 text-sm mb-6 text-center" dir="ltr"></p>
                 
                 <form id="orderForm" class="space-y-6">
-                    <!-- פרטים -->
-                    <div class="p-4 border border-gray-600 rounded-lg">
-                        <h3 class="text-lg font-bold text-blue-400 mb-4 border-b border-gray-600 pb-2">פרטי הזמנה</h3>
+                    <!-- פרטי הזמנה -->
+                    <div class="p-4 border border-gray-600 rounded-lg" id="details-section">
+                        <h3 class="text-lg font-bold mb-4 border-b border-gray-600 pb-2 text-blue-400 form-section-title">פרטי הזמנה</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input type="text" id="sender-name" class="input-style" placeholder="שם השולח">
-                            <input type="text" id="edition-name" class="input-style" placeholder="שם המהדורה">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">שם השולח:</label>
+                                <input type="text" id="sender-name" class="input-style" placeholder="[הקלד כאן]">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">שם המהדורה:</label>
+                                <input type="text" id="edition-name" class="input-style" placeholder="[הקלד כאן]">
+                            </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-4 mt-2">
-                            <div id="fixed-broadcast-date" class="input-style flex items-center bg-gray-700 cursor-not-allowed"></div>
-                            <div id="fixed-estimated-time" class="input-style flex items-center bg-gray-700 cursor-not-allowed"></div>
+                        <div class="grid grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">תאריך שידור:</label>
+                                <input type="date" id="broadcast-date" class="input-style">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">שעה משוערת:</label>
+                                <input type="time" id="estimated-time" class="input-style">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- מפרט טכני (מעודכן) -->
+                    <div class="p-4 border border-gray-600 rounded-lg" id="tech-specs-section">
+                        <h3 class="text-lg font-bold mb-4 border-b border-gray-600 pb-2 text-blue-400 form-section-title">מפרט טכני</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            <div class="flex items-center space-x-2 space-x-reverse mb-3">
+                                <input type="checkbox" id="glass-wall-mode" class="h-5 w-5 text-blue-500 rounded border-gray-300 focus:ring-blue-500">
+                                <label for="glass-wall-mode" class="text-sm text-gray-300 mr-2">מצב קיר זכוכית</label>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">גודל פונט כותרת:</label>
+                                <input type="number" id="title-font-size" class="input-style" value="135">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">זמן קומפוזיציה:</label>
+                                <select id="composition-duration" class="select-style">
+                                    <option value="30">30 שניות</option>
+                                    <option value="45">45 שניות</option>
+                                    <option value="90">90 שניות</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">צורת בולטים:</label>
+                                <select id="bullet-shape" class="select-style">
+                                    <option value="numbers">מספרים</option>
+                                    <option value="square">ריבוע</option>
+                                    <option value="circle">עיגול</option>
+                                    <option value="none">ללא</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- קבצים מצורפים -->
+                    <div class="p-4 border border-gray-600 rounded-lg" id="attachments-section">
+                        <h3 class="text-lg font-bold mb-4 border-b border-gray-600 pb-2 text-blue-400 form-section-title">קבצים מצורפים</h3>
+                        <div class="flex flex-wrap justify-between gap-4 mb-4">
+                            <label class="flex items-center space-x-2 space-x-reverse cursor-pointer">
+                                <input type="checkbox" class="attachment-checkbox form-checkbox h-5 w-5 text-blue-500 rounded" data-label="קובץ אודיו">
+                                <span class="text-gray-300">קובץ אודיו (קריינות לגרפיקה)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 space-x-reverse cursor-pointer">
+                                <input type="checkbox" class="attachment-checkbox form-checkbox h-5 w-5 text-blue-500 rounded" data-label="תמונה">
+                                <span class="text-gray-300">תמונה (רקע או אילוסטרציה)</span>
+                            </label>
+                            <label class="flex items-center space-x-2 space-x-reverse cursor-pointer">
+                                <input type="checkbox" class="attachment-checkbox form-checkbox h-5 w-5 text-blue-500 rounded" data-label="קובץ וידאו">
+                                <span class="text-gray-300">קובץ וידאו</span>
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-1 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">קישור תמונה ראשית:</label>
+                                <input type="text" id="main-image-link" class="input-style" placeholder="הדבק קישור כאן">
+                            </div>
                         </div>
                     </div>
 
                     <!-- תוכן דינמי -->
-                    <div id="dynamic-content-section" class="p-4 border border-gray-600 rounded-lg"></div>
+                    <div id="dynamic-content-section" class="p-4 border border-border-color rounded-lg"></div>
 
                     <!-- הערות -->
-                    <div>
-                        <h3 class="text-lg font-bold text-gray-400 mb-2">הערות נוספות</h3>
-                        <textarea id="notes" class="input-style h-24" placeholder="הערות לגרפיקאי..."></textarea>
+                    <div class="p-4 rounded-lg">
+                        <h3 class="text-lg font-bold text-gray-400 mb-2 form-section-title">הערות נוספות לגרפיקאי</h3>
+                        <textarea id="notes" class="input-style h-24 resize-none" placeholder="[הקלד כאן]"></textarea>
                     </div>
+
+                    <!-- דיסקליימר (ניתן לעריכה) -->
+                    <div class="p-4 border-t border-gray-700 mt-4">
+                        <label class="block text-xs text-gray-500 mb-1 text-center">טקסט דיסקליימר (ניתן לעריכה):</label>
+                        <textarea id="disclaimer-text" class="w-full bg-transparent text-xs text-gray-500 text-center border-none focus:ring-0 resize-none overflow-hidden" rows="2">* הטופס מיועד לשימוש פנימי בלבד. אנא ודאו כי כל הפרטים נכונים לפני השליחה.</textarea>
+                    </div>
+
+                    <!-- כפתורי פעולה תחתונים -->
+                    <div class="flex flex-col gap-3 mt-4 pt-4 border-t border-gray-700">
+                        <button type="button" onclick="openEditorWithParams()" class="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-[1.01] flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            פתח בתוכנת העריכה (טען נתונים)
+                        </button>
+                        <button type="button" onclick="saveFormAsText()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            שמור כקובץ טקסט
+                        </button>
+                    </div>
+
                 </form>
+                
+                <footer class="mt-8 text-center text-xs text-gray-500 border-t border-gray-700 pt-4">
+                    &copy; OREN GAMCHI
+                </footer>
             </div>
         </div>
-
-        <!-- לוגים -->
-        <div id="active-requests-view" class="mt-12 pt-6 border-t border-gray-700">
-            <h2 class="text-2xl font-bold text-white mb-4">תיעוד שיגורים אחרונים</h2>
-            <div id="requests-list" class="space-y-3">
-                <p class="text-gray-500">טוען נתונים...</p>
-            </div>
-        </div>
-
     </main>
 
-    <!-- סקריפט ראשי (לוגיקה ותצוגה - נטען מיד) -->
+    <!-- סקריפט לוגיקה -->
     <script>
-        // נתונים
+        const DEFAULT_VIDEO = "https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/start%20here.mp4";
+        const TEMPLATE_VIDEO = "https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/were%20here.mp4";
+        
         const SHOWS = [
             { name: 'המהדורה המרכזית', presenter: 'מירי מיכאלי ודניאל רוט-אבנרי', role: '20:00', color: '#ef4444', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%9E%D7%99%D7%A8%D7%99_%D7%9E%D7%99%D7%9B%D7%90%D7%9C%D7%99_%D7%92%D7%93%D7%95%D7%9C.png', id: 'main' },
             { name: 'קבינט שישי', presenter: 'נוה דרומי', role: 'שישי 19:53', color: '#f97316', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A0%D7%95%D7%95%D7%94_%D7%93%D7%A8%D7%95%D7%9E%D7%99_%D7%92%D7%93%D7%95%D7%9C.png', id: 'fri' },
@@ -245,26 +402,44 @@
         ];
 
         const TEMPLATES = [
-            { name: 'תבנית סטורי', id: 'Story', icon: '📱', color: 'border-orange-500' },
-            { name: 'תבנית מצגת', id: 'Presentation', icon: '📺', color: 'border-blue-500' },
-            { name: 'תבנית מאסטר', id: 'Master', icon: '🎛️', color: 'border-red-500' },
-            { name: 'תבנית תמלול', id: 'Transcript', icon: '📝', color: 'border-green-500' },
-            { name: 'תבנית סושיאל', id: 'SocialMedia', icon: '👍', color: 'border-purple-500' },
-            { name: 'תבנית עיתון', id: 'Newspaper', icon: '📰', color: 'border-yellow-500' },
-            { name: 'תבנית בולטים', id: 'Bullets', icon: '📋', color: 'border-teal-500' }
+            { name: 'תבנית סטורי', id: 'Story', icon: '<i class="fa-solid fa-mobile-screen geo-icon"></i>', color: 'border-orange-500' },
+            { name: 'תבנית מצגת', id: 'Presentation', icon: '<i class="fa-solid fa-clapperboard geo-icon"></i>', color: 'border-blue-500' },
+            { name: 'תבנית מאסטר', id: 'Master', icon: '<i class="fa-solid fa-layer-group geo-icon"></i>', color: 'border-red-500' },
+            { name: 'תבנית תמלול', id: 'Transcript', icon: '<i class="fa-solid fa-quote-right geo-icon"></i>', color: 'border-green-500' },
+            { name: 'תבנית סושיאל', id: 'SocialMedia', icon: '<i class="fa-solid fa-hashtag geo-icon"></i>', color: 'border-purple-500' },
+            { name: 'תבנית עיתון', id: 'Newspaper', icon: '<i class="fa-solid fa-newspaper geo-icon"></i>', color: 'border-yellow-500' },
+            { name: 'תבנית בולטים', id: 'Bullets', icon: '<i class="fa-solid fa-list-ul geo-icon"></i>', color: 'border-teal-500' }
         ];
 
-        let currentShow = null;
+        const TEMPLATE_CONFIGS = {
+            'Bullets': {
+                title: 'טופס הזמנה - בולטים',
+                fields: [
+                    { id: 'main-title', label: 'כותרת ראשית', lines: 2, maxLen: 15, isBold: true, defaultValue: '[הקלד כאן]' },
+                    { id: 'subtitle', label: 'כותרת משנה', lines: 2, maxLen: 15, isBold: false, defaultValue: '[הקלד כאן]' },
+                    { id: 'section1', label: 'סעיף 1', lines: 2, maxLen: 30, defaultValue: '[הקלד כאן]' },
+                    { id: 'section2', label: 'סעיף 2', lines: 2, maxLen: 30, defaultValue: '[הקלד כאן]' },
+                    { id: 'section3', label: 'סעיף 3', lines: 2, maxLen: 30, defaultValue: '[הקלד כאן]' },
+                    { id: 'section4', label: 'סעיף 4', lines: 2, maxLen: 30, defaultValue: '[הקלד כאן]' },
+                    { id: 'section5', label: 'סעיף 5', lines: 2, maxLen: 30, defaultValue: '[הקלד כאן]' },
+                    { id: 'section6', label: 'סעיף 6', lines: 2, maxLen: 30, defaultValue: '[הקלד כאן]' },
+                    { id: 'section7', label: 'סעיף 7', lines: 2, maxLen: 30, defaultValue: '[הקלד כאן]' },
+                    { id: 'section8', label: 'סעיף 8', lines: 2, maxLen: 30, defaultValue: '[הקלד כאן]' },
+                ]
+            }
+        };
 
-        // אתחול מיידי של התצוגה
+        let currentShow = null;
+        let activeConfig = TEMPLATE_CONFIGS['Bullets'];
+
         document.addEventListener('DOMContentLoaded', () => {
             renderMenu();
             renderLobby();
             updateTime();
             setInterval(updateTime, 1000);
+            updateBanner(DEFAULT_VIDEO, 'מערכת שיגור גרפיקה', 'i24NEWS Production');
         });
 
-        // פונקציות תצוגה
         function toggleMenu(e) {
             e.stopPropagation();
             document.getElementById('main-dropdown').classList.toggle('show');
@@ -292,10 +467,11 @@
             const grid = document.getElementById('presenters-grid');
             grid.innerHTML = SHOWS.map(show => `
                 <div onclick="selectShow('${show.id}')" class="presenter-card bg-[#1e293b] rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-b-4" style="border-color: ${show.color}">
-                    <div class="card-image-wrapper">
+                    <!-- גרדיאנט רקע -->
+                    <div class="card-image-wrapper relative">
                         <div class="card-image" style="background-image: url('${show.img}')"></div>
                     </div>
-                    <div class="p-4">
+                    <div class="p-4 relative z-10" style="background: inherit;">
                         <h3 class="text-xl font-bold text-white">${show.name}</h3>
                         <p class="text-gray-400 text-sm">${show.presenter}</p>
                     </div>
@@ -308,9 +484,7 @@
             document.getElementById('lobby-view').classList.add('hidden');
             document.getElementById('bullets-form-view').classList.add('hidden');
             document.getElementById('template-lobby-view').classList.remove('hidden');
-            
-            // עדכון באנר
-            updateBanner('בחר תבנית גרפית', `עבור: ${currentShow.name}`);
+            updateBanner(TEMPLATE_VIDEO, 'בחר תבנית גרפית', `עבור: ${currentShow.name}`);
             renderTemplates();
         }
 
@@ -318,100 +492,293 @@
             document.getElementById('template-lobby-view').classList.add('hidden');
             document.getElementById('bullets-form-view').classList.add('hidden');
             document.getElementById('lobby-view').classList.remove('hidden');
-            updateBanner('מערכת שיגור גרפיקה', 'i24NEWS Production');
+            updateBanner(DEFAULT_VIDEO, 'מערכת שיגור גרפיקה', 'i24NEWS Production');
         }
 
         function renderTemplates() {
             const grid = document.getElementById('templates-grid');
-            grid.innerHTML = TEMPLATES.map(t => `
-                <div onclick="openTemplate('${t.id}')" class="bg-[#1e293b] rounded-xl p-4 cursor-pointer shadow-md hover:bg-[#334155] border-b-4 ${t.color} transition text-center">
-                    <div class="text-4xl mb-2">${t.icon}</div>
-                    <h3 class="text-white font-bold">${t.name}</h3>
+            grid.innerHTML = TEMPLATES.map(t => {
+                const isDisabled = t.id !== 'Bullets';
+                const disabledClass = isDisabled ? 'disabled-card' : '';
+                return `
+                <div onclick="${isDisabled ? '' : `openTemplate('${t.id}')`}" 
+                     class="template-card bg-[#1e293b] rounded-xl p-4 cursor-pointer shadow-md hover:bg-[#334155] border-b-4 ${t.color} transition text-center ${disabledClass}">
+                    <div class="template-image-wrapper">${t.icon}</div>
+                    <h3 class="text-white font-bold mt-2">${t.name}</h3>
+                    ${isDisabled ? '<p class="text-xs text-yellow-400 mt-1">בבנייה</p>' : ''}
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         function showTemplateLobby() {
             document.getElementById('bullets-form-view').classList.add('hidden');
             document.getElementById('template-lobby-view').classList.remove('hidden');
+            if(currentShow) {
+                updateBanner(TEMPLATE_VIDEO, 'בחר תבנית גרפית', `עבור: ${currentShow.name}`);
+            }
         }
 
         function openTemplate(type) {
             if (type === 'Bullets') {
+                activeConfig = TEMPLATE_CONFIGS['Bullets'];
                 document.getElementById('template-lobby-view').classList.add('hidden');
                 document.getElementById('bullets-form-view').classList.remove('hidden');
                 
-                // עדכון טופס
                 document.getElementById('edition-name').value = currentShow.name;
                 const formCard = document.getElementById('form-card');
-                formCard.style.borderTop = `4px solid ${currentShow.color}`;
-                document.querySelector('#bullets-form-view h2').style.color = currentShow.color;
+                formCard.style.borderTopColor = currentShow.color;
                 
-                renderBulletsFields();
-            } else {
-                // פתיחת קישור חיצוני (סימולציה)
-                const url = `https://your-github-repo.com/forms/template_${type}.html?show=${encodeURIComponent(currentShow.name)}`;
-                window.open(url, '_blank');
-                logRequest(type, url, 'חיצוני');
-            }
+                document.querySelectorAll('.form-section-title').forEach(el => {
+                    el.style.color = currentShow.color;
+                    el.style.borderColor = currentShow.color;
+                });
+                
+                document.getElementById('main-form-title').innerText = `${activeConfig.title} | ${currentShow.name}`;
+                updateBanner(DEFAULT_VIDEO, `${activeConfig.title}`, `מילוי עבור: ${currentShow.name}`);
+
+                renderDynamicContent();
+            } 
         }
 
-        function renderBulletsFields() {
+        function renderDynamicContent() {
             const container = document.getElementById('dynamic-content-section');
-            container.innerHTML = `
-                <h3 class="text-lg font-bold text-gray-300 mb-4 border-b border-gray-600 pb-2">תוכן בולטים</h3>
-                <div class="mb-4">
-                    <label class="text-sm text-gray-400">כותרת ראשית (עד 15 תווים)</label>
-                    <input type="text" class="input-style font-bold text-lg" placeholder="כותרת...">
-                </div>
-                <div class="space-y-2">
-                    <input type="text" class="input-style" placeholder="סעיף 1...">
-                    <input type="text" class="input-style" placeholder="סעיף 2...">
-                    <input type="text" class="input-style" placeholder="סעיף 3...">
-                </div>
-            `;
+            if (!activeConfig) return;
+
+            container.style.borderColor = currentShow ? currentShow.color : '#475569';
+
+            let html = `<h3 class="text-lg font-bold mb-4 border-b pb-2 form-section-title" style="color:${currentShow.color}; border-color:${currentShow.color}">תוכן הגרפיקה (נא למלא במדויק)</h3>`;
+            
+            activeConfig.fields.forEach(field => {
+                const sectionId = field.id;
+                const labelText = `${field.label} (מקסימום ${field.maxLen} תווים):`;
+                
+                html += `
+                <div id="${sectionId}-section" class="mb-6 p-3 rounded hover:bg-white/5 transition border border-transparent hover:border-gray-600">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-medium text-gray-300">${labelText}</label>
+                        <button type="button" onclick="clearSection('${sectionId}')" class="bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-1 rounded transition">🗑️ בטל</button>
+                    </div>`;
+
+                if (field.isTextArea) {
+                    html += `<textarea id="${sectionId}" class="input-style" rows="${field.lines}" maxlength="${field.maxLen}" placeholder="${field.defaultValue}">${field.defaultValue || ''}</textarea>`;
+                } else {
+                    for (let i = 1; i <= field.lines; i++) {
+                        const extraClasses = field.isBold ? 'font-bold text-lg' : '';
+                        const widthClass = (field.maxLen === 30) ? 'section-input-style' : ''; 
+                        const ph = i > 1 ? `שורה ${i}` : field.defaultValue;
+                        
+                        html += `
+                        <div class="mb-2">
+                            <input type="text" id="${sectionId}-line${i}" 
+                                   class="input-style ${extraClasses} ${widthClass}" 
+                                   placeholder="${ph}" 
+                                   value="${field.defaultValue && i===1 ? field.defaultValue : ''}" 
+                                   maxlength="${field.maxLen}">
+                        </div>`;
+                    }
+                }
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+            
+            setupEnterKeyNavigation();
         }
 
-        function updateBanner(title, subtitle) {
-            document.getElementById('banner-title').textContent = title;
-            document.getElementById('banner-subtitle').textContent = subtitle;
+        function clearSection(sectionId) {
+            const section = document.getElementById(sectionId + '-section');
+            if(!section) return;
+            const isCancelled = section.classList.toggle('cancelled');
+            section.querySelectorAll('input, textarea').forEach(input => {
+                if(isCancelled) {
+                    input.setAttribute('disabled', 'true');
+                    input.dataset.oldValue = input.value;
+                    input.value = "מבוטל";
+                } else {
+                    input.removeAttribute('disabled');
+                    input.value = input.dataset.oldValue || "";
+                }
+            });
+        }
+
+        function setupEnterKeyNavigation() {
+            const inputs = document.querySelectorAll('#orderForm input:not([disabled]), #orderForm textarea:not([disabled])');
+            inputs.forEach((input, index) => {
+                input.addEventListener('keydown', (e) => {
+                    if(e.key === 'Enter' && input.tagName !== 'TEXTAREA') {
+                        e.preventDefault();
+                        if(inputs[index + 1]) inputs[index + 1].focus();
+                    }
+                });
+            });
+        }
+
+        function updateBanner(videoUrl, title, subtitle) {
+            const videoElement = document.getElementById('banner-video');
+            const sourceElement = document.getElementById('banner-video-source');
+            
+            if (videoElement && sourceElement && videoUrl && sourceElement.src !== videoUrl) {
+                sourceElement.src = videoUrl;
+                videoElement.load();
+                videoElement.play().catch(e => console.log("Autoplay prevented", e));
+            }
+            
+            if (title === 'מערכת שיגור גרפיקה') {
+                 document.getElementById('banner-title').textContent = '';
+                 document.getElementById('banner-subtitle').textContent = '';
+            } else {
+                 document.getElementById('banner-title').textContent = title;
+                 document.getElementById('banner-subtitle').textContent = subtitle;
+            }
         }
 
         function updateTime() {
             const now = new Date();
-            document.getElementById('fixed-broadcast-date').textContent = now.toLocaleDateString('he-IL');
-            document.getElementById('fixed-estimated-time').textContent = now.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'});
+            const dateInput = document.getElementById('broadcast-date');
+            const timeInput = document.getElementById('estimated-time');
+
+            if (dateInput && !dateInput.value) {
+                dateInput.valueAsDate = now;
+            }
+            if (timeInput && !timeInput.value) {
+                const timeString = now.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit', hour12: false});
+                timeInput.value = timeString;
+            }
         }
 
         function toggleDarkMode() {
             document.body.classList.toggle('light-mode');
+            const btn = document.querySelector('.mode-toggle-button');
             const isLight = document.body.classList.contains('light-mode');
             const card = document.getElementById('form-card');
             if(card) card.style.backgroundColor = isLight ? '#ffffff' : '#1e293b';
+            
+            if(btn) {
+                btn.textContent = isLight ? '🌗 מצב לילה' : '☀️ מצב יום';
+                if(isLight) {
+                    btn.classList.remove('bg-gray-600', 'hover:bg-gray-500');
+                    btn.classList.add('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
+                } else {
+                    btn.classList.add('bg-gray-600', 'hover:bg-gray-500');
+                    btn.classList.remove('bg-gray-200', 'text-gray-800', 'hover:bg-gray-300');
+                }
+            }
+        }
+
+        function openEditorWithParams() {
+            const mainTitle = document.getElementById('main-title-line1') ? document.getElementById('main-title-line1').value : '';
+            const subTitle = document.getElementById('subtitle-line1') ? document.getElementById('subtitle-line1').value : '';
+            
+            let items = [];
+            for(let i = 1; i <= 8; i++) {
+                const el = document.getElementById(`section${i}-line1`);
+                if(el && el.value && el.value !== '[הקלד כאן]') {
+                    items.push(el.value);
+                }
+            }
+            
+            const mainImage = document.getElementById('main-image-link') ? document.getElementById('main-image-link').value : '';
+            const duration = document.getElementById('composition-duration').value;
+            const shape = document.getElementById('bullet-shape').value;
+            
+            const editorBaseUrl = 'https://orengamchi.github.io/i24_demo_app/after_coder_v36_clean_demo.html';
+            
+            const params = new URLSearchParams();
+            if(mainTitle && mainTitle !== '[הקלד כאן]') params.append('title', mainTitle);
+            if(subTitle && subTitle !== '[הקלד כאן]') params.append('subtitle', subTitle);
+            if(items.length > 0) params.append('items', items.join('|'));
+            if(mainImage) params.append('image', mainImage);
+            params.append('duration', duration);
+            params.append('shape', shape);
+            
+            const fullUrl = `${editorBaseUrl}?${params.toString()}`;
+            window.open(fullUrl, '_blank');
         }
 
         function saveFormAsText() {
-            const text = `הזמנה עבור: ${currentShow?.name}\nתאריך: ${new Date().toLocaleString()}\n...`;
-            const blob = new Blob([text], {type: 'text/plain'});
+            const dateInput = document.getElementById('broadcast-date').value;
+            const timeInput = document.getElementById('estimated-time').value;
+            const dateObj = new Date(dateInput);
+            const formattedDate = dateObj.toLocaleDateString('he-IL');
+            const edition = document.getElementById('edition-name').value;
+            const duration = document.getElementById('composition-duration').value;
+            const shape = document.getElementById('bullet-shape').options[document.getElementById('bullet-shape').selectedIndex].text;
+            const disclaimer = document.getElementById('disclaimer-text').value;
+            
+            let content = `נושא: ${activeConfig.title} (מהדורת ${edition})\n`;
+            content += `----------------------------------------\n`;
+            content += `פרטי הזמנה:\n`;
+            content += `שם השולח/כתב: ${document.getElementById('sender-name').value || '[לא מולא]'}\n`;
+            content += `שם המהדורה: ${edition || '[לא מולא]'}\n`;
+            content += `תאריך שידור: ${formattedDate}\n`;
+            content += `שעת שידור משוערת: ${timeInput}\n`;
+            content += `----------------------------------------\n`;
+            content += `מצב קיר זכוכית: ${document.getElementById('glass-wall-mode').checked ? 'כן' : 'לא'}\n`;
+            content += `גודל פונט כותרת: ${document.getElementById('title-font-size').value}\n`;
+            content += `משך זמן קומפוזיציה: ${duration} שניות\n`;
+            content += `צורת בולטים: ${shape}\n`;
+            content += `----------------------------------------\n`;
+            content += `קבצים מצורפים (סמן ב-X אם רלוונטי):\n`;
+            
+            const files = Array.from(document.querySelectorAll('.attachment-checkbox')).map(cb => {
+                const label = cb.dataset.label;
+                const mark = cb.checked ? '[X]' : '[ ]';
+                if(label.includes('אודיו')) return `${mark} קובץ אודיו (קריינות לגרפיקה)`;
+                if(label.includes('תמונה')) return `${mark} תמונה (רקע או אילוסטרציה)`;
+                if(label.includes('וידאו')) return `${mark} קובץ וידאו`;
+                return `${mark} ${label}`;
+            }).join('\n');
+            content += files + '\n\n';
+            
+            const mainLink = document.getElementById('main-image-link').value;
+            if(mainLink) content += `קישור תמונה ראשית: ${mainLink} \n`;
+            
+            content += `----------------------------------------\n`;
+            content += `תוכן הגרפיקה (נא למלא במדויק):\n\n`;
+            
+            activeConfig.fields.forEach(f => {
+                const sec = document.getElementById(f.id + '-section');
+                content += `${f.label}:\n`;
+                if(sec.classList.contains('cancelled')) {
+                    content += `[מבוטל]\n\n`;
+                } else {
+                    if(f.isTextArea) {
+                        content += document.getElementById(f.id).value + '\n\n';
+                    } else {
+                        for(let i=1; i<=f.lines; i++) {
+                            const val = document.getElementById(`${f.id}-line${i}`).value;
+                            content += val + '\n';
+                        }
+                        content += '\n';
+                    }
+                }
+            });
+            
+            content += `----------------------------------------\n`;
+            content += `הערות נוספות לגרפיקאי (צבעים/סגנון/דגשים):\n`;
+            content += `${document.getElementById('notes').value || '[הקלד כאן]'}\n\n`;
+            
+            content += `----------------------------------------\n`;
+            content += `דיסקליימר:\n${disclaimer}`;
+            
+            const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = 'order.txt';
+            a.download = `order_form_in_${edition.replace(/\s/g,'_')}.txt`;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
+            
             logRequest('Bullets', 'internal', 'פנימי');
         }
 
-        // Firebase Logging Helper (מוגדר גלובלית כדי שהמודול ישתמש בו)
         window.logRequest = function(type, url, status) {
-            console.log(`Logging request: ${type} - ${status}`);
-            // הלוגיקה האמיתית נמצאת במודול למטה
-            if (window.app && window.app.logToFirebase) {
+            if(window.app && window.app.logToFirebase) {
                 window.app.logToFirebase(type, url, status);
             }
         };
-
     </script>
 
-    <!-- סקריפט Firebase (מופרד כדי למנוע קריסה) -->
+    <!-- סקריפט Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -426,8 +793,8 @@
             const auth = getAuth(app);
             const db = getFirestore(app);
 
-            // פונקציית לוג
             window.app = window.app || {};
+            
             window.app.logToFirebase = async (type, url, status) => {
                 if (!auth.currentUser) return;
                 try {
@@ -439,49 +806,17 @@
                         timestamp: serverTimestamp(),
                         status: status
                     });
-                } catch (e) { console.error("Log error", e); }
+                } catch (e) { console.error("Log failed", e); }
             };
 
-            // Auth Flow
             const initAuth = async () => {
                 try {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } catch (error) {
-                    console.error("Auth Failed", error);
-                }
+                    if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken);
+                    else await signInAnonymously(auth);
+                } catch (e) { console.error("Auth failed", e); }
             };
 
-            initAuth().then(() => {
-                 onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        // Start Listener only after auth
-                        const q = query(collection(db, `/artifacts/${appId}/public/data/graphics_requests_log`), orderBy('timestamp', 'desc'));
-                        onSnapshot(q, (snapshot) => {
-                            const list = document.getElementById('requests-list');
-                            if(!list) return; // Guard against missing element
-                            if(snapshot.empty) { list.innerHTML = '<p class="text-gray-500">אין נתונים</p>'; return; }
-                            
-                            list.innerHTML = snapshot.docs.slice(0, 5).map(doc => {
-                                const data = doc.data();
-                                const time = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleTimeString() : '';
-                                return `
-                                    <div class="bg-gray-800 p-3 rounded flex justify-between border-r-4 border-blue-500">
-                                        <span>${data.templateType} - ${data.show}</span>
-                                        <span class="text-xs text-gray-400">${time}</span>
-                                    </div>
-                                `;
-                            }).join('');
-                        }, (error) => {
-                            console.error("Snapshot error:", error);
-                            // Squelch permission errors in UI, just log to console
-                        });
-                    }
-                 });
-            });
+            initAuth(); 
         }
     </script>
 </body>
