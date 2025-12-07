@@ -479,18 +479,6 @@
 <body>
 
 <div class="container">
-    <!-- Preview Canvas (Placed first for Mobile order logic, or handled by flex-order in CSS if needed, but clean HTML structure is better. 
-         Note: In previous CSS I used column-reverse. Here I changed to column and fixed order in CSS.
-         Actually, let's keep HTML logical: Sidebar first for Desktop. Mobile CSS handles the switch or use DOM order.
-         To support the request perfectly: "Preview top, Form scrolls below".
-         
-         If I keep Sidebar first in HTML:
-         Desktop: Row -> Sidebar | Preview
-         Mobile: Column -> Preview (via order) | Sidebar (via order).
-         
-         Let's stick to the CSS solution I wrote in the thought process.
-    -->
-
     <!-- Sidebar Controls -->
     <div class="sidebar">
         <div class="main-header">v_60 BULLETS CLEAN</div>
@@ -958,7 +946,7 @@
     window.onload = function() {
         toggleLineInputs(); 
         toggleShineSettings(); 
-        // initGallery(); // Removed gallery init
+        initGallery();
         
         // Add Audio Input Listener
         const audioInput = document.getElementById('audioFileInput');
@@ -988,7 +976,26 @@
     };
     
     // --- Gallery Init ---
-    // Removed initGallery function
+    function initGallery() {
+        const gal = document.getElementById('bgGallery');
+        presetBackgrounds.forEach(preset => {
+            const el = document.createElement('div');
+            el.className = 'bg-item';
+            el.innerText = preset.name;
+            el.onclick = function() {
+                // Update active state in gallery
+                document.querySelectorAll('.bg-item').forEach(d => d.classList.remove('active'));
+                el.classList.add('active');
+                
+                // Set remote video
+                setRemoteMedia('bg', preset.url);
+                
+                // Update text input
+                document.getElementById('mediaBgUrl').value = preset.url;
+            };
+            gal.appendChild(el);
+        });
+    }
     
     // --- Helper for Safe Access ---
     function getSafeCheck(id) {
@@ -2515,38 +2522,6 @@ ${linesTxt}----------------------------------------
         startProp.setValueAtTime(delay, 0);
         startProp.setValueAtTime(delay + duration, 100);
     }
-
-    // --- NEW HELPER FOR GLASS WALL MODE (ROUNDED MASK) ---
-    function applyGlassMaskToComp(compName) {
-        var comp = null;
-        for (var i = 1; i <= app.project.numItems; i++) {
-            if (app.project.item(i) instanceof CompItem && app.project.item(i).name === compName) {
-                comp = app.project.item(i);
-                break;
-            }
-        }
-        if (!comp) return;
-
-        // Remove existing mask if any
-        var existingMask = findLayer(comp, "Glass Mask");
-        if(existingMask) existingMask.remove();
-
-        var layer = comp.layers.addShape();
-        layer.name = "Glass Mask";
-        var sg = layer.property("Contents").addProperty("ADBE Vector Group");
-        var sp = sg.property("Contents").addProperty("ADBE Vector Shape - Rect");
-        sp.property("Size").setValue([1920, 1080]);
-        sp.property("Roundness").setValue(45); // 45px Rounded Corners
-        var sf = sg.property("Contents").addProperty("ADBE Vector Graphic - Fill");
-        sf.property("Color").setValue([1,1,1]);
-        
-        layer.moveToBeginning(); // Move to top (Layer 1)
-
-        // Set Track Matte for all subsequent layers
-        for(var i=2; i<=comp.numLayers; i++) {
-            setTrackMatteSafe(comp.layer(i), layer);
-        }
-    }
     
     function createGraphics(comp, uiControls, forcedDuration) {
         if (!comp) return;
@@ -2569,19 +2544,8 @@ ${linesTxt}----------------------------------------
         var bulletStyle = uiControls.bulletStyle; var animType = uiControls.animType;
         
         var bgLayer = createSolidBackground(comp, colorBg, forcedDuration);
+        if (uiControls.animBG) addBreathingAnimation(bgLayer);
         
-        // --- GLASS WALL MODE LOGIC ---
-        var isGlass = uiControls.glassMode;
-        if (isGlass) {
-             // 1. Lower BG opacity in Main Comp
-             if(bgLayer) bgLayer.opacity.setValue(50);
-             // 2. Set Work Area to Frame 0 for PNG Export
-             comp.workAreaStart = 0;
-             comp.workAreaDuration = comp.frameDuration; // 1 frame
-        } else {
-             if (uiControls.animBG) addBreathingAnimation(bgLayer);
-        }
-
         var audioComp = getOrCreatePreComp(app.project, "PUT AUDIO HERE", 1920, 1080, [0.3, 0, 0.3], forcedDuration);
         var audioLayer = findLayer(comp, "PUT AUDIO HERE");
         if (!audioLayer) {
@@ -2601,7 +2565,7 @@ ${linesTxt}----------------------------------------
 
         if (!uiControls.disableGraphic) {
             var imgLayer = updateOrCreateImageLayer(comp, "PLACE IMAGE HERE", [comp.width/2, comp.height/2], forcedDuration); imgLayer.enabled = true; imgLayer.moveBefore(bgLayer); 
-            if (uiControls.animMain && !isGlass) addBreathingAnimation(imgLayer); // Disable breath in Glass
+            if (uiControls.animMain) addBreathingAnimation(imgLayer);
 
             addDisclaimerToPreComp(comp, uiControls.disclaimer, forcedDuration, uiControls.showDiscBanner, colorDiscBanner, colorDiscEdge);
             var dl = findLayer(comp, "Disclaimer Main");
@@ -2610,34 +2574,11 @@ ${linesTxt}----------------------------------------
             var accentLayer = updateOrCreateAccent(comp, "Accent Source", colorShape, [200, 540], uiControls.skewMask, forcedDuration);
             accentLayer.enabled = true; accentLayer.moveBefore(imgLayer); setTrackMatteSafe(imgLayer, accentLayer);
             
-            // Handle Accent/Mask Entrance Animation (Disable in Glass Mode)
-            if (isGlass) {
-                 // Remove keys if existing or just set static
-                 var p = accentLayer.property("Position");
-                 var s = accentLayer.property("Scale");
-                 var o = accentLayer.property("Opacity");
-                 // Remove all keys
-                 while(p.numKeys > 0) p.removeKey(1);
-                 while(s.numKeys > 0) s.removeKey(1);
-                 while(o.numKeys > 0) o.removeKey(1);
-                 // Ensure visibility and final pos
-                 o.setValue(100); s.setValue([100,100]);
-                 // Position is already set by updateOrCreateAccent
-            } else {
-                 // Normal animation
-                 // addEntranceAnimation is called inside updateOrCreateAccent for keys, but we might need to override if it was called
-                 // updateOrCreateAccent calls it. Let's modify updateOrCreateAccent or handle it here.
-                 // Actually updateOrCreateAccent adds animation by default. 
-                 // Let's remove keys if Glass.
-            }
-            
             if (uiControls.skewMask && uiControls.enableShine) {
                 var sw = parseFloat(uiControls.shineWidth) || 4;
                 var sp = parseFloat(uiControls.shineSpeed) || 3.0;
                 var off = parseFloat(uiControls.shineOffset) || 0;
-                // Force static if Glass Mode
-                var sStatic = isGlass ? true : uiControls.shineStatic;
-                createShineLayer(comp, 1080, true, colorShine, sw, sp, uiControls.shineGlow, sStatic, off);
+                createShineLayer(comp, 1080, true, colorShine, sw, sp, uiControls.shineGlow, uiControls.shineStatic, off);
             } else {
                 var sL = findLayer(comp, "Shine Line"); if(sL) sL.remove();
             }
@@ -2659,17 +2600,13 @@ ${linesTxt}----------------------------------------
         listLayer.property("Position").setValue([960, 1000]); 
         
         // --- Titles ---
-        var t1 = updateOrCreateText(comp, "Title 1 Text", uiControls.title1 || " ", whiteCol, ${t1Size}, "Arial-BoldMT"); 
+        var t1 = updateOrCreateText(comp, "Title 1 Text", uiControls.title1 || " ", whiteCol, 130, "Arial-BoldMT"); 
         var t1Rect = t1.sourceRectAtTime(0, false); updateLayerPosition(t1, [rightAlignX - 10, cursorY + 5 - t1Rect.top]);
-        if (t1.property("Position").numKeys === 0 && !isGlass) addEntranceAnimation(t1, 0.5, "slide", 0.8);
-        // If Glass Mode, ensure no keys
-        if (isGlass) { while(t1.property("Position").numKeys > 0) t1.property("Position").removeKey(1); while(t1.property("Opacity").numKeys > 0) t1.property("Opacity").removeKey(1); t1.property("Opacity").setValue(100); }
-
+        if (t1.property("Position").numKeys === 0) addEntranceAnimation(t1, 0.5, "slide", 0.8);
         // Reduced padding from 70 to 40
         var boxW = t1Rect.width + 40; var boxH = t1Rect.height + 10;       
         var b1Obj = updateOrCreateTrapezoid(comp, "Box 1", color1, rightAlignX, cursorY, boxW, boxH, uiControls.skewT1); b1Obj.layer.moveAfter(t1); 
-        if (b1Obj.isNew && !isGlass) addEntranceAnimation(b1Obj.layer, 0.5, "slide", 0.8);
-        if (isGlass) { while(b1Obj.layer.property("Position").numKeys > 0) b1Obj.layer.property("Position").removeKey(1); while(b1Obj.layer.property("Opacity").numKeys > 0) b1Obj.layer.property("Opacity").removeKey(1); b1Obj.layer.property("Opacity").setValue(100); }
+        if (b1Obj.isNew) addEntranceAnimation(b1Obj.layer, 0.5, "slide", 0.8);
         
         if (uiControls.hideBoxTitle1) b1Obj.layer.enabled = false;
         else b1Obj.layer.enabled = true;
@@ -2679,13 +2616,10 @@ ${linesTxt}----------------------------------------
         if (!disableT2) {
             var t2 = updateOrCreateText(comp, "Title 2 Text", uiControls.title2 || " ", whiteCol, 100, "ArialMT"); t2.enabled = true;
             var t2Rect = t2.sourceRectAtTime(0, false); updateLayerPosition(t2, [rightAlignX - 10, cursorY + 5 - t2Rect.top]);
-            if (t2.property("Position").numKeys === 0 && !isGlass) addEntranceAnimation(t2, 0.7, "slide", 0.8);
-            if (isGlass) { while(t2.property("Position").numKeys > 0) t2.property("Position").removeKey(1); while(t2.property("Opacity").numKeys > 0) t2.property("Opacity").removeKey(1); t2.property("Opacity").setValue(100); }
-            
+            if (t2.property("Position").numKeys === 0) addEntranceAnimation(t2, 0.7, "slide", 0.8);
             var boxW2 = t2Rect.width + 120; var boxH2 = t2Rect.height + 10;
             var b2Obj = updateOrCreateTrapezoid(comp, "Box 2", color2, rightAlignX, cursorY, boxW2, boxH2, uiControls.skewT2); b2Obj.layer.enabled = true; b2Obj.layer.moveAfter(t2);
-            if (b2Obj.isNew && !isGlass) addEntranceAnimation(b2Obj.layer, 0.7, "slide", 0.8);
-            if (isGlass) { while(b2Obj.layer.property("Position").numKeys > 0) b2Obj.layer.property("Position").removeKey(1); while(b2Obj.layer.property("Opacity").numKeys > 0) b2Obj.layer.property("Opacity").removeKey(1); b2Obj.layer.property("Opacity").setValue(100); }
+            if (b2Obj.isNew) addEntranceAnimation(b2Obj.layer, 0.7, "slide", 0.8);
             
             if (uiControls.hideBoxTitle2) b2Obj.layer.enabled = false;
             else b2Obj.layer.enabled = true;
@@ -2747,26 +2681,17 @@ ${linesTxt}----------------------------------------
 
                 var stagger = currentStartTime; var bSpace = (bulletStyle !== 'none') ? 40 : 0;
                 updateLayerPosition(ti, [rightAlignX - 15 - bSpace, listCursorY + 10 - tiRect.top]);
-                // Entrance for List Items: Disable if Glass Mode
-                if (!isGlass) {
-                    addEntranceAnimation(ti, stagger, animType, myDuration); 
-                    addTypewriterEffect(ti, stagger, myDuration);
-                } else {
-                    // No typewriter, no entrance
-                }
+                addEntranceAnimation(ti, stagger, animType, myDuration); 
+                
+                addTypewriterEffect(ti, stagger, myDuration);
                 
                 var boxWi = tiRect.width + 30 + bSpace; var boxHi = tiRect.height + 20;
                 var biObj = updateOrCreateTrapezoid(listComp, boxName, cInst.box, rightAlignX, listCursorY, boxWi, boxHi, uiControls.skewInst);
-                if (hideBanners) { biObj.layer.enabled = false; } else { 
-                    biObj.layer.enabled = true; biObj.layer.moveAfter(ti); 
-                    if(!isGlass) addEntranceAnimation(biObj.layer, stagger, animType, myDuration); 
-                }
-                
+                if (hideBanners) { biObj.layer.enabled = false; } else { biObj.layer.enabled = true; biObj.layer.moveAfter(ti); addEntranceAnimation(biObj.layer, stagger, animType, myDuration); }
                 if (bulletStyle !== 'none') {
                     var bY = listCursorY + 10 + (tiRect.height/2); var bX = rightAlignX - 15 - (bSpace/2);
                     var geoLayer = addBulletShape(listComp, bulletName, bulletStyle, bX, bY, 20, cInst.text);
-                    geoLayer.enabled = true; geoLayer.moveBefore(ti); 
-                    if(!isGlass) addEntranceAnimation(geoLayer, stagger, animType, myDuration);
+                    geoLayer.enabled = true; geoLayer.moveBefore(ti); addEntranceAnimation(geoLayer, stagger, animType, myDuration);
                     geoLayer.parent = scrollNull;
                 } 
                 
@@ -2783,7 +2708,6 @@ ${linesTxt}----------------------------------------
             }
         }
         
-        // Scroll Animation Logic
         var cumulativeScroll = 0;
         var posProp = scrollNull.property("Position");
         
@@ -2791,42 +2715,26 @@ ${linesTxt}----------------------------------------
              posProp.setValueAtTime(0, [960, 540]);
         }
         
-        if (!isGlass) { // Only animate scroll if not glass mode (static)
-            for (var k = 3; k < activeIndices.length; k++) {
-                 var currentLineIdx = k; 
-                 var startTimeOfLine = lineStartTimes[currentLineIdx]; 
-                 var durationOfLine = durations[activeIndices[currentLineIdx]]; 
-                 var scrollOutHeight = lineHeights[k-3];
-                 
-                 var t1 = startTimeOfLine;
-                 var val1 = [960, 540 - cumulativeScroll];
-                 posProp.setValueAtTime(t1, val1);
-                 
-                 cumulativeScroll += scrollOutHeight;
-                 var t2 = startTimeOfLine + durationOfLine; 
-                 var val2 = [960, 540 - cumulativeScroll];
-                 posProp.setValueAtTime(t2, val2);
-            }
-        } else {
-             // Glass mode: static layout. Usually list is static too? 
-             // If static, maybe show all lines or just first 3?
-             // Prompt says "Open composition fully open without animations".
-             // This might imply showing all text? But list height is limited.
-             // For now, we just disable the scrolling *animation*, meaning it stays at top.
-             // If user wants to see all, they fit in 1080p if < 8 lines usually.
-             // We leave it at start position [960, 540] (cumulativeScroll = 0).
+        for (var k = 3; k < activeIndices.length; k++) {
+             var currentLineIdx = k; 
+             var startTimeOfLine = lineStartTimes[currentLineIdx]; 
+             var durationOfLine = durations[activeIndices[currentLineIdx]]; 
+             var scrollOutHeight = lineHeights[k-3];
+             
+             var t1 = startTimeOfLine;
+             var val1 = [960, 540 - cumulativeScroll];
+             posProp.setValueAtTime(t1, val1);
+             
+             cumulativeScroll += scrollOutHeight;
+             var t2 = startTimeOfLine + durationOfLine; 
+             var val2 = [960, 540 - cumulativeScroll];
+             posProp.setValueAtTime(t2, val2);
         }
         
         comp.motionBlur = true;
         for (var k = 1; k <= comp.numLayers; k++) { 
             comp.layer(k).outPoint = comp.duration; 
             comp.layer(k).motionBlur = true; 
-        }
-
-        // --- Apply Glass Masks if needed (Last Step) ---
-        if (uiControls.glassMode) {
-             applyGlassMaskToComp("PLACE IMAGE HERE");
-             applyGlassMaskToComp("BG IMAGE HERE");
         }
     }
     
@@ -2865,7 +2773,6 @@ ${linesTxt}----------------------------------------
             hideInstBanners: ${hideInstBanners},
             hideBoxTitle1: ${hideBoxTitle1},
             hideBoxTitle2: ${hideBoxTitle2},
-            glassMode: ${glassMode}, // Pass glassMode
             bulletStyle: "${bulletStyle}",
             animType: "${animType}",
             animMain: ${animMain},
@@ -2893,11 +2800,15 @@ ${linesTxt}----------------------------------------
     
     function downloadAEScript() {
         const scriptStr = generateAEScriptContent();
-        const blob = new Blob([scriptStr], { type: 'text/javascript' });
+        // Change MIME type to generic stream to prevent OS from appending .es or .txt
+        const blob = new Blob([scriptStr], { type: 'application/octet-stream' });
         const link = document.createElement('a');
         link.href = window.URL.createObjectURL(blob);
         link.download = "bullets_clean_v60.jsx";
+        // Append to body (safer for some browsers)
+        document.body.appendChild(link); 
         link.click();
+        document.body.removeChild(link); // Clean up
     }
     
     function downloadAllAsZip() {
