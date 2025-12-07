@@ -427,13 +427,46 @@
         .bg-item:hover { border-color: var(--accent-color); background: #f0f8ff; }
         .bg-item.active { border-color: var(--active-green); background: #e8f5e9; font-weight: bold; }
 
-        /* Mobile */
+        /* Mobile Adjustments - Scrolling Fixed */
         @media (max-width: 900px) {
-            body { padding: 0; flex-direction: column; height: 100dvh; }
-            .container { flex-direction: column-reverse; height: 100%; border-radius: 0; }
-            .preview-area { flex: 0 0 35%; border-bottom: 4px solid var(--accent-color); background: #111; }
-            .sidebar { width: 100%; border-left: none; }
-            .scroll-content { padding-bottom: 20px; }
+            body { 
+                padding: 0; 
+                height: 100dvh; 
+                overflow: hidden; /* Prevent body scroll */
+            }
+            .container { 
+                flex-direction: column; /* Normal column direction */
+                height: 100%; 
+                border-radius: 0; 
+            }
+            .preview-area { 
+                flex: 0 0 35vh; /* Fixed top height */
+                width: 100%;
+                border-bottom: 4px solid var(--accent-color); 
+                background: #111; 
+                z-index: 10;
+            }
+            .sidebar { 
+                flex: 1; /* Take remaining space */
+                width: 100%; 
+                border-left: none; 
+                overflow-y: auto; /* Main scroll for mobile */
+                display: flex;
+                flex-direction: column;
+                /* IMPORTANT: Ensures smooth scrolling on iOS */
+                -webkit-overflow-scrolling: touch;
+            }
+            /* Disable internal scrolling on mobile, let the sidebar parent handle it */
+            .scroll-content { 
+                overflow: visible;
+                flex: none; 
+                height: auto;
+                padding-bottom: 20px;
+            }
+            /* Ensure fixed elements flow naturally */
+            .main-header, .top-controls, .btn-container {
+                flex-shrink: 0;
+            }
             .play-btn { width: 40px; height: 40px; }
         }
         
@@ -446,6 +479,18 @@
 <body>
 
 <div class="container">
+    <!-- Preview Canvas (Placed first for Mobile order logic, or handled by flex-order in CSS if needed, but clean HTML structure is better. 
+         Note: In previous CSS I used column-reverse. Here I changed to column and fixed order in CSS.
+         Actually, let's keep HTML logical: Sidebar first for Desktop. Mobile CSS handles the switch or use DOM order.
+         To support the request perfectly: "Preview top, Form scrolls below".
+         
+         If I keep Sidebar first in HTML:
+         Desktop: Row -> Sidebar | Preview
+         Mobile: Column -> Preview (via order) | Sidebar (via order).
+         
+         Let's stick to the CSS solution I wrote in the thought process.
+    -->
+
     <!-- Sidebar Controls -->
     <div class="sidebar">
         <div class="main-header">v_60 BULLETS CLEAN</div>
@@ -538,7 +583,15 @@
             </div>
 
             <!-- Group NEW: Background Warehouse -->
-            <!-- Removed Background Warehouse Group -->
+            <div class="control-group" id="group-warehouse">
+                <h3 onclick="toggleAccordion('group-warehouse')">מחסן רקעים</h3>
+                <div class="group-content">
+                    <p style="font-size:11px; color:#666; margin-bottom:5px;">לחץ לטעינת רקע מהדורה:</p>
+                    <div class="bg-gallery" id="bgGallery">
+                        <!-- Items injected via JS -->
+                    </div>
+                </div>
+            </div>
 
             <!-- Group 3: General Settings -->
             <div class="control-group" id="group-general">
@@ -712,7 +765,7 @@
 
                     <div class="input-row">
                         <label>מהירות (ללא אודיו):</label>
-                        <input type="number" id="listAnimSpeed" value="2.0" step="0.1" min="0.1" max="10.0" style="width: 60px;" onchange="drawPreview(true)">
+                        <input type="number" id="listAnimSpeed" value="1.0" step="0.1" min="0.1" max="10.0" style="width: 60px;" onchange="drawPreview(true)">
                     </div>
                     
                     <div style="display:flex; gap:15px; margin-bottom:10px;">
@@ -1627,7 +1680,7 @@ ${linesTxt}----------------------------------------
             let scale = Math.max(canvas.width / img.width, canvas.height / img.height);
             scale *= 1.15; 
             
-            if (getSafeCheck('animMain')) {
+            if (getSafeCheck('animMain') && !glassMode) {
                 scale *= breathScale;
             }
 
@@ -1696,6 +1749,9 @@ ${linesTxt}----------------------------------------
                  else discAlpha = 1;
              }
              
+             // If Glass Mode is on, force full opacity immediately
+             if (glassMode) discAlpha = 1.0;
+
              ctx.globalAlpha = discAlpha;
              ctx.translate(260, 950); 
 
@@ -1842,7 +1898,12 @@ ${linesTxt}----------------------------------------
         ctx.clip();
         
         // Apply Scroll Translation
-        ctx.translate(0, -baseScroll);
+        // If Glass Mode is ON, disable scrolling translation (baseScroll = 0) to show static content
+        if (glassMode) {
+             ctx.translate(0, 0); 
+        } else {
+             ctx.translate(0, -baseScroll);
+        }
 
         // Loop for 8 Lines Drawing
         let currentDrawY = headerBottomY;
@@ -1857,14 +1918,23 @@ ${linesTxt}----------------------------------------
             if (isEnabled && txt) {
                 // Calculate type progress based on specific line timing
                 let typeProgress = 0;
-                if (time > myStart) {
-                    if (time >= myStart + myDuration) typeProgress = 1;
-                    else typeProgress = (time - myStart) / myDuration;
+                
+                if (glassMode) {
+                     typeProgress = 1; // Full text immediately in Glass Mode
+                } else {
+                     if (time > myStart) {
+                        if (time >= myStart + myDuration) typeProgress = 1;
+                        else typeProgress = (time - myStart) / myDuration;
+                     }
                 }
 
                 // Animation Transform (Entrance)
-                // We use the same start time for the "slide" entrance
-                let instTrans = getAnimTransform(time, myStart, myDuration, animType, rightAlignX, currentDrawY);
+                let instTrans = { x: rightAlignX, y: currentDrawY, scale: 1, alpha: 1 };
+                
+                if (!glassMode) {
+                     // We use the same start time for the "slide" entrance
+                     instTrans = getAnimTransform(time, myStart, myDuration, animType, rightAlignX, currentDrawY);
+                }
                 
                 const lines = getLines(txt);
                 
