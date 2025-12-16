@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>v_60 BULLETS CLEAN</title>
+    <title>BULLETS DEMO</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
@@ -397,35 +397,10 @@
         }
         
         .ae-btn { background-color: #6610f2; } .ae-btn:hover { background-color: #520dc2; }
-        .secondary-btn { padding: 8px; background: #495057; color: white; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-size: 13px; }
+        .secondary-btn { padding: 8px; background: #495057; color: white; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-size: 13px; text-align: center; }
         .secondary-btn:hover { background: #343a40; }
 
         .copyright-footer { margin-top: 5px; text-align: center; font-size: 11px; color: #adb5bd; }
-
-        /* Video Gallery */
-        .bg-gallery {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            padding: 5px 0;
-        }
-        .bg-item {
-            background: #fff;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 8px;
-            font-size: 12px;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 40px;
-        }
-        .bg-item:hover { border-color: var(--accent-color); background: #f0f8ff; }
-        .bg-item.active { border-color: var(--active-green); background: #e8f5e9; font-weight: bold; }
 
         /* Mobile Adjustments - Scrolling Fixed */
         @media (max-width: 900px) {
@@ -474,6 +449,8 @@
         
         /* Show the Key file load button specifically */
         #apiKeyInput + .icon-btn { display: flex; }
+        
+        #extraLines { display: none; margin-top: 5px; border-top: 1px dashed #ccc; padding-top: 5px; }
     </style>
 </head>
 <body>
@@ -481,7 +458,7 @@
 <div class="container">
     <!-- Sidebar Controls -->
     <div class="sidebar">
-        <div class="main-header">v_60 BULLETS CLEAN</div>
+        <div class="main-header">BULLETS DEMO</div>
         
         <!-- TOP Separate Controls -->
         <div class="top-controls">
@@ -545,12 +522,19 @@
             <div class="control-group open" id="group-media">
                 <h3 onclick="toggleAccordion('group-media')">מדיה (תמונות/וידאו)</h3>
                 <div class="group-content">
+                    <label>תיקיית מדיה (קבצים מקומיים):</label>
+                    <input type="text" id="mediaFolderPath" value="C:\Users\user\Desktop\oren_plugin_demo\MEDIA FILES" placeholder="נתיב לתיקיית המדיה במחשב...">
+                    
+                    <div style="border-top:1px solid #eee; margin:10px 0; padding-top:10px;"></div>
+
                     <label>תמונה/וידאו ראשי (Main):</label>
                     <div class="file-upload-wrapper">
                         <button class="file-btn" id="btnMediaMain">בחר קובץ</button>
                         <input type="file" accept="image/*,video/*" onchange="handleMediaUpload('main', this)">
                     </div>
                     <input type="text" id="mediaMainUrl" placeholder="נתיב/קישור לקובץ ראשי..." style="margin-top:5px; font-size:11px; color:#666;">
+                    <!-- Store filename for AE script -->
+                    <input type="hidden" id="mediaMainFileName">
 
                     <!-- Image Alignment Option -->
                     <div style="margin-top:8px; display:flex; gap:10px;">
@@ -563,21 +547,17 @@
                         </label>
                     </div>
                     
-                    <!-- Background Upload REMOVED per user request -->
-                    <input type="hidden" id="mediaBgUrl"> <!-- Hidden input just to store URL from gallery/reporter -->
+                    <div style="border-top:1px solid #eee; margin:10px 0; padding-top:10px;"></div>
+
+                    <label>רקע (Background):</label>
+                    <div class="file-upload-wrapper">
+                        <button class="file-btn" id="btnMediaBG">בחר רקע</button>
+                        <input type="file" accept="image/*,video/*" onchange="handleMediaUpload('bg', this)">
+                    </div>
+                    <input type="text" id="mediaBgUrl" placeholder="נתיב/קישור לתמונת רקע..." style="margin-top:5px; font-size:11px; color:#666;">
+                    <input type="hidden" id="mediaBgFileName">
 
                     <p style="font-size:11px; color:#666; margin-top:5px;">*קבצים אלו יוצגו בתצוגה המקדימה. באפטר יש להשתמש בכפתורי הייבוא בפלאגין.</p>
-                </div>
-            </div>
-
-            <!-- Group NEW: Background Warehouse -->
-            <div class="control-group" id="group-warehouse">
-                <h3 onclick="toggleAccordion('group-warehouse')">מחסן רקעים</h3>
-                <div class="group-content">
-                    <p style="font-size:11px; color:#666; margin-bottom:5px;">לחץ לטעינת רקע מהדורה:</p>
-                    <div class="bg-gallery" id="bgGallery">
-                        <!-- Items injected via JS -->
-                    </div>
                 </div>
             </div>
 
@@ -801,60 +781,65 @@
                             <input type="text" id="inst3" value="הזן טקסט לקריינות." onchange="drawPreview(true)">
                         </div>
 
-                        <!-- Line 4 -->
-                        <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="enableLine4" onchange="toggleLineInputs(); drawPreview(true)"> 
-                                    <span>שורה 4</span>
-                                </label>
+                        <!-- Hidden Lines 4-8 -->
+                        <div id="extraLines">
+                            <!-- Line 4 -->
+                            <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableLine4" onchange="toggleLineInputs(); drawPreview(true)"> 
+                                        <span>שורה 4</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="inst4" value="" onchange="drawPreview(true)">
                             </div>
-                            <input type="text" id="inst4" value="" onchange="drawPreview(true)">
-                        </div>
 
-                        <!-- Line 5 -->
-                        <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="enableLine5" onchange="toggleLineInputs(); drawPreview(true)"> 
-                                    <span>שורה 5</span>
-                                </label>
+                            <!-- Line 5 -->
+                            <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableLine5" onchange="toggleLineInputs(); drawPreview(true)"> 
+                                        <span>שורה 5</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="inst5" value="" onchange="drawPreview(true)">
                             </div>
-                            <input type="text" id="inst5" value="" onchange="drawPreview(true)">
-                        </div>
 
-                        <!-- Line 6 -->
-                        <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="enableLine6" onchange="toggleLineInputs(); drawPreview(true)"> 
-                                    <span>שורה 6</span>
-                                </label>
+                            <!-- Line 6 -->
+                            <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableLine6" onchange="toggleLineInputs(); drawPreview(true)"> 
+                                        <span>שורה 6</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="inst6" value="" onchange="drawPreview(true)">
                             </div>
-                            <input type="text" id="inst6" value="" onchange="drawPreview(true)">
-                        </div>
 
-                        <!-- Line 7 -->
-                        <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="enableLine7" onchange="toggleLineInputs(); drawPreview(true)"> 
-                                    <span>שורה 7</span>
-                                </label>
+                            <!-- Line 7 -->
+                            <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableLine7" onchange="toggleLineInputs(); drawPreview(true)"> 
+                                        <span>שורה 7</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="inst7" value="" onchange="drawPreview(true)">
                             </div>
-                            <input type="text" id="inst7" value="" onchange="drawPreview(true)">
-                        </div>
 
-                        <!-- Line 8 -->
-                        <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="enableLine8" onchange="toggleLineInputs(); drawPreview(true)"> 
-                                    <span>שורה 8</span>
-                                </label>
+                            <!-- Line 8 -->
+                            <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableLine8" onchange="toggleLineInputs(); drawPreview(true)"> 
+                                        <span>שורה 8</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="inst8" value="" onchange="drawPreview(true)">
                             </div>
-                            <input type="text" id="inst8" value="" onchange="drawPreview(true)">
                         </div>
+                        
+                        <div class="secondary-btn" id="btnToggleLines" onclick="toggleExtraLines()" style="margin-top:10px;">➕ הוסף שורות (4-8)</div>
                     </div>
                 </div>
             </div>
@@ -916,8 +901,8 @@
 
     // Media State
     const mediaState = {
-        main: { type: null, element: null }, 
-        bg: { type: null, element: null }
+        main: { type: null, element: null, fileName: null }, 
+        bg: { type: null, element: null, fileName: null }
     };
     
     // Smooth BG transition state
@@ -946,7 +931,7 @@
     window.onload = function() {
         toggleLineInputs(); 
         toggleShineSettings(); 
-        initGallery();
+        // initGallery(); // Removed gallery init
         
         // Add Audio Input Listener
         const audioInput = document.getElementById('audioFileInput');
@@ -966,8 +951,8 @@
                     };
                 } else {
                     globalAudioDuration = 0;
-                     const labelSpan = document.querySelector('label[for="audioFileInput"] span');
-                     if(labelSpan) labelSpan.innerText = "טען אודיו";
+                      const labelSpan = document.querySelector('label[for="audioFileInput"] span');
+                      if(labelSpan) labelSpan.innerText = "טען אודיו";
                 }
             });
         }
@@ -975,28 +960,19 @@
         drawPreview(true); 
     };
     
-    // --- Gallery Init ---
-    function initGallery() {
-        const gal = document.getElementById('bgGallery');
-        presetBackgrounds.forEach(preset => {
-            const el = document.createElement('div');
-            el.className = 'bg-item';
-            el.innerText = preset.name;
-            el.onclick = function() {
-                // Update active state in gallery
-                document.querySelectorAll('.bg-item').forEach(d => d.classList.remove('active'));
-                el.classList.add('active');
-                
-                // Set remote video
-                setRemoteMedia('bg', preset.url);
-                
-                // Update text input
-                document.getElementById('mediaBgUrl').value = preset.url;
-            };
-            gal.appendChild(el);
-        });
+    // --- UI Helper: Toggle Extra Lines ---
+    function toggleExtraLines() {
+        var el = document.getElementById('extraLines');
+        var btn = document.getElementById('btnToggleLines');
+        if (el.style.display === 'block') {
+            el.style.display = 'none';
+            btn.innerText = '➕ הוסף שורות (4-8)';
+        } else {
+            el.style.display = 'block';
+            btn.innerText = '➖ הסתר שורות (4-8)';
+        }
     }
-    
+
     // --- Helper for Safe Access ---
     function getSafeCheck(id) {
         var el = document.getElementById(id);
@@ -1090,6 +1066,14 @@
             const file = input.files[0];
             const url = URL.createObjectURL(file);
             const type = file.type.startsWith('video/') ? 'video' : 'image';
+            
+            // Store filename for AE export
+            if(slot === 'main') {
+                document.getElementById('mediaMainFileName').value = file.name;
+            } else if (slot === 'bg') {
+                document.getElementById('mediaBgFileName').value = file.name;
+            }
+
             setRemoteMedia(slot, url, type);
             
             const btn = (slot === 'main') ? document.getElementById('btnMediaMain') : document.getElementById('btnMediaBG');
@@ -1156,6 +1140,14 @@
         }
     }
 
+    function updateButtonUI(btnId, fileName) {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.innerText = "קובץ נבחר: " + fileName.substring(0, 10) + "...";
+            btn.classList.add('active');
+        }
+    }
+
     function parseReporterText(text) {
         const getValue = (key) => {
             const regex = new RegExp(key + ":\\s*([\\s\\S]*?)(?=\\r?\\n(?:.*?:|-{3,}|$))", "i");
@@ -1179,10 +1171,36 @@
         if (media1) {
             document.getElementById('mediaMainUrl').value = media1;
             setRemoteMedia('main', media1);
+            // NEW: Extract filename from URL/Path for AE script
+            try {
+                // Normalize slashes to forward slashes for splitting
+                var cleanPath = media1.replace(/\\/g, '/');
+                
+                // Extract Folder Path (Remove filename)
+                var lastSlashIndex = cleanPath.lastIndexOf('/');
+                if (lastSlashIndex !== -1) {
+                    var folderPath = cleanPath.substring(0, lastSlashIndex);
+                    document.getElementById('mediaFolderPath').value = folderPath;
+                }
+
+                var parts = cleanPath.split('/');
+                var fName = parts[parts.length - 1];
+                document.getElementById('mediaMainFileName').value = fName;
+                updateButtonUI('btnMediaMain', fName);
+            } catch(e) {}
         }
+        
         if (media2) {
             document.getElementById('mediaBgUrl').value = media2;
             setRemoteMedia('bg', media2);
+            // NEW: Extract filename for BG
+            try {
+                var cleanPath = media2.replace(/\\/g, '/');
+                var parts = cleanPath.split('/');
+                var fName = parts[parts.length - 1];
+                document.getElementById('mediaBgFileName').value = fName;
+                updateButtonUI('btnMediaBG', fName);
+            } catch(e) {}
         }
         
         // Parse New Fields
@@ -1209,13 +1227,66 @@
              if(preset) {
                  setRemoteMedia('bg', preset.url);
                  document.getElementById('mediaBgUrl').value = preset.url;
+                 
+                 // Try to guess local filename from URL
+                 // Example URL: .../%D7%94%D7%99%D7%A9%D7%A8%D7%90%D7%9C%D7%99%D7%9D_1.mp4
+                 try {
+                     var urlParts = preset.url.split('/');
+                     var fileNameEncoded = urlParts[urlParts.length - 1];
+                     var fileName = decodeURIComponent(fileNameEncoded);
+                     document.getElementById('mediaBgFileName').value = fileName;
+                     updateButtonUI('btnMediaBG', fileName);
+                 } catch(e) {}
              }
         }
         
+        // Parse Bullet Style Section
+        const bulletsRegex = /צורת בולטים[\s\S]*?(?:-{3,}|$)/i;
+        const bulletsMatch = text.match(bulletsRegex);
+        if (bulletsMatch) {
+            const bulletsSection = bulletsMatch[0];
+            const hasSquare = bulletsSection.includes("ריבוע");
+            const hasCircle = bulletsSection.includes("עיגול");
+            const hasNumber = bulletsSection.includes("מספרים");
+            
+            let count = (hasSquare ? 1 : 0) + (hasCircle ? 1 : 0) + (hasNumber ? 1 : 0);
+            
+            if (count === 1) {
+                if (hasSquare) document.getElementById('bulletStyle').value = 'square';
+                else if (hasCircle) document.getElementById('bulletStyle').value = 'circle';
+                else if (hasNumber) document.getElementById('bulletStyle').value = 'none';
+            }
+        }
+
+        // NEW: Parse Bullet Animation Section
+        const animRegex = /אנימציית בולטים[\s\S]*?(?:-{3,}|$)/i;
+        const animMatch = text.match(animRegex);
+        if (animMatch) {
+            const animSection = animMatch[0];
+            const hasSlide = animSection.includes("Slide");
+            const hasScale = animSection.includes("Scale");
+            const hasFade = animSection.includes("Fade");
+            
+            let aCount = (hasSlide ? 1 : 0) + (hasScale ? 1 : 0) + (hasFade ? 1 : 0);
+            if (aCount === 1) {
+                if (hasSlide) document.getElementById('animType').value = 'slide';
+                else if (hasScale) document.getElementById('animType').value = 'scale';
+                else if (hasFade) document.getElementById('animType').value = 'fade';
+            }
+        }
+
+        let hasExtraLines = false;
         for (let i = 1; i <= 8; i++) {
             const val = getValue("סעיף " + i);
             document.getElementById('inst' + i).value = val;
             document.getElementById('enableLine' + i).checked = (val !== "");
+            
+            if (i >= 4 && val !== "") hasExtraLines = true;
+        }
+        
+        if (hasExtraLines) {
+            document.getElementById('extraLines').style.display = 'block';
+            document.getElementById('btnToggleLines').innerText = '➖ הסתר שורות (4-8)';
         }
 
         toggleLineInputs(); 
@@ -1231,8 +1302,6 @@
         const mediaBg = document.getElementById('mediaBgUrl').value;
         const isGlass = document.getElementById('glassMode').checked ? "כן" : "לא";
         
-        // Removed manual preset name retrieval from DOM
-        
         const t1Size = document.getElementById('title1Size').value;
         
         let linesTxt = "";
@@ -1240,8 +1309,6 @@
             linesTxt += `סעיף ${i}:\n[הקלד כאן]\n\n`;
         }
         
-        // Removed bgExtra logic based on gallery selection
-
         return `נושא: טופס הזמנה - בולטים (מהדורת ${date})
 ----------------------------------------
 פרטי הזמנה:
@@ -1252,6 +1319,16 @@
 ----------------------------------------
 מצב קיר זכוכית: ${isGlass}
 גודל פונט כותרת: ${t1Size}
+----------------------------------------
+צורת בולטים (מחק את המיותר):
+1. מספרים
+2. ריבוע
+3. עיגול
+----------------------------------------
+אנימציית בולטים (מחק את המיותר):
+1. Slide
+2. Scale
+3. Fade
 ----------------------------------------
 קבצים מצורפים (סמן ב-X אם רלוונטי):
 [ ] קובץ אודיו (קריינות לגרפיקה)
@@ -1280,7 +1357,7 @@ ${linesTxt}----------------------------------------
         const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = "order_form.txt";
+        link.download = "BULLETS FORM DEMO.txt";
         
         // Fix for FireFox
         document.body.appendChild(link);
@@ -1352,11 +1429,17 @@ ${linesTxt}----------------------------------------
                     const text = data.candidates[0].content.parts[0].text;
                     const lines = text.split('\n').filter(line => line.trim() !== '');
                     
+                    let hasExtraLines = false;
                     for (let i = 0; i < 8; i++) {
                         if (lines[i]) {
                             document.getElementById('inst' + (i+1)).value = formatBulletText(lines[i]);
                             document.getElementById('enableLine' + (i+1)).checked = true;
+                            if (i >= 3) hasExtraLines = true;
                         }
+                    }
+                    if (hasExtraLines) {
+                        document.getElementById('extraLines').style.display = 'block';
+                        document.getElementById('btnToggleLines').innerText = '➖ הסתר שורות (4-8)';
                     }
                     toggleLineInputs();
                     statusDiv.innerText = "התמלול הושלם! (אודיו מוכן לניגון)";
@@ -1699,6 +1782,17 @@ ${linesTxt}----------------------------------------
                 x = (canvas.width / 2) - (img.width / 2) * scale;
             }
             y = (canvas.height / 2) - (img.height / 2) * scale;
+            
+            // Image Opacity Entrance in Preview
+            // Fade in from 1.5s to 2.0s
+            let imgAlpha = 1.0;
+            if (!glassMode && animId) {
+                if (time < 1.5) imgAlpha = 0;
+                else if (time < 2.0) imgAlpha = (time - 1.5) / 0.5;
+                else imgAlpha = 1.0;
+            }
+            ctx.globalAlpha = imgAlpha;
+            
             ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
             
             ctx.restore(); 
@@ -1832,6 +1926,7 @@ ${linesTxt}----------------------------------------
         for (let i = 1; i <= 8; i++) {
             const isEnabled = getSafeCheck('enableLine' + i);
             const txt = document.getElementById('inst' + i).value;
+            // Use pre-calculated timings
             const myDuration = durations[i-1];
             
             if (isEnabled && txt) {
@@ -1927,20 +2022,20 @@ ${linesTxt}----------------------------------------
                 let typeProgress = 0;
                 
                 if (glassMode) {
-                     typeProgress = 1; // Full text immediately in Glass Mode
+                      typeProgress = 1; // Full text immediately in Glass Mode
                 } else {
-                     if (time > myStart) {
-                        if (time >= myStart + myDuration) typeProgress = 1;
-                        else typeProgress = (time - myStart) / myDuration;
-                     }
+                      if (time > myStart) {
+                         if (time >= myStart + myDuration) typeProgress = 1;
+                         else typeProgress = (time - myStart) / myDuration;
+                      }
                 }
 
                 // Animation Transform (Entrance)
                 let instTrans = { x: rightAlignX, y: currentDrawY, scale: 1, alpha: 1 };
                 
                 if (!glassMode) {
-                     // We use the same start time for the "slide" entrance
-                     instTrans = getAnimTransform(time, myStart, myDuration, animType, rightAlignX, currentDrawY);
+                      // We use the same start time for the "slide" entrance
+                      instTrans = getAnimTransform(time, myStart, myDuration, animType, rightAlignX, currentDrawY);
                 }
                 
                 const lines = getLines(txt);
@@ -1973,7 +2068,13 @@ ${linesTxt}----------------------------------------
         const disclaimer = document.getElementById('disclaimer').value || "";
         const durIdx = document.getElementById('durationMode').value;
         const imgAlign = document.querySelector('input[name="imgAlign"]:checked') ? document.querySelector('input[name="imgAlign"]:checked').value : 'left';
+        const mediaFolderPath = document.getElementById('mediaFolderPath').value || "";
+        const mediaMainFileName = document.getElementById('mediaMainFileName').value || "";
+        const mediaBgFileName = document.getElementById('mediaBgFileName').value || "";
         
+        // Track audio
+        const hasAudio = (document.getElementById('audioFileInput').files.length > 0 || globalAudioURL !== null);
+
         const colBg = document.getElementById('colorBg').value;
         const col1 = document.getElementById('color1').value;
         const col2 = document.getElementById('color2').value;
@@ -2066,18 +2167,38 @@ ${linesTxt}----------------------------------------
         layer.property("Scale").expression = exp;
     }
     
-    function importMediaFromDialog(targetCompName, alignMode) {
+    function importMediaFromDialog(targetCompName, alignMode, folderPath, fileName) {
         var targetComp = getOrCreatePreComp(app.project, targetCompName, 1920, 1080, [0.5,0.5,0.5], 30);
         if (!targetComp) return null;
-        var file = File.openDialog("Select Media for " + targetCompName);
-        if (file) {
-            try {
-                var importOptions = new ImportOptions(file);
-                var importedItem = app.project.importFile(importOptions);
-                while(targetComp.numLayers > 0) { targetComp.layer(1).remove(); }
-                var layer = targetComp.layers.add(importedItem);
-                alignLayerInComp(targetComp, layer, alignMode);
-            } catch(e) { alert("Import Failed: " + e.toString()); } 
+        
+        var importedItem = null;
+        
+        // Try automatic import if folderPath and fileName exist
+        if (folderPath && fileName) {
+            var f = new File(folderPath + "/" + fileName);
+            if (f.exists) {
+                try {
+                    var importOptions = new ImportOptions(f);
+                    importedItem = app.project.importFile(importOptions);
+                } catch(e) { }
+            }
+        }
+        
+        // Fallback to Dialog
+        if (!importedItem) {
+            var file = File.openDialog("Select Media for " + targetCompName);
+            if (file) {
+                try {
+                    var importOptions = new ImportOptions(file);
+                    importedItem = app.project.importFile(importOptions);
+                } catch(e) { alert("Import Failed: " + e.toString()); } 
+            }
+        }
+        
+        if (importedItem) {
+            while(targetComp.numLayers > 0) { targetComp.layer(1).remove(); }
+            var layer = targetComp.layers.add(importedItem);
+            alignLayerInComp(targetComp, layer, alignMode);
         }
     }
     
@@ -2157,7 +2278,7 @@ ${linesTxt}----------------------------------------
                              if (layer.property("Time Remap").canSetExpression) {
                                 layer.property("Time Remap").expression = "loopOut('cycle');";
                              }
-                         }
+                          }
                     }
                     if (layer.outPoint < newDuration) {
                         layer.outPoint = newDuration;
@@ -2261,7 +2382,7 @@ ${linesTxt}----------------------------------------
         return layer;
     }
 
-    function addDisclaimerToPreComp(comp, text, forcedDuration, showBanner, bannerColor, edgeColor) {
+    function addDisclaimerToPreComp(comp, text, forcedDuration, showBanner, bannerColor, edgeColor, isGlass) {
         var layerName = "Disclaimer Main";
         var layer = findLayer(comp, layerName);
         if (!layer) {
@@ -2281,9 +2402,14 @@ ${linesTxt}----------------------------------------
         
         var op = layer.property("Opacity");
         while(op.numKeys > 0) op.removeKey(1);
-        op.setValueAtTime(0, 0);
-        op.setValueAtTime(2, 0);
-        op.setValueAtTime(3, 100);
+        
+        if (isGlass) {
+            op.setValue(100);
+        } else {
+            op.setValueAtTime(0, 0);
+            op.setValueAtTime(2, 0);
+            op.setValueAtTime(3, 100);
+        }
         
         var bannerName = "Disclaimer Banner";
         var bLayer = findLayer(comp, bannerName);
@@ -2329,7 +2455,7 @@ ${linesTxt}----------------------------------------
         return layer;
     }
     
-    function createShineLayer(comp, accentH, enableSkew, col, wid, spd, glow, isStatic, offset) {
+    function createShineLayer(comp, accentH, enableSkew, col, wid, spd, glow, isStatic, offset, isGlass) {
         var name = "Shine Line";
         var layer = findLayer(comp, name);
         if (layer) layer.remove(); 
@@ -2359,7 +2485,11 @@ ${linesTxt}----------------------------------------
             layer.property("Rotation").setValue(0);
         }
 
-        layer.inPoint = 2.5; 
+        if (isGlass) {
+            layer.inPoint = 0;
+        } else {
+            layer.inPoint = 2.5;
+        } 
 
         if (!isStatic) {
             var trim = shapeGroup.property("Contents").addProperty("ADBE Vector Filter - Trim");
@@ -2609,8 +2739,23 @@ ${linesTxt}----------------------------------------
         if (!uiControls.disableGraphic) {
             var imgLayer = updateOrCreateImageLayer(comp, "PLACE IMAGE HERE", [comp.width/2, comp.height/2], forcedDuration); imgLayer.enabled = true; imgLayer.moveBefore(bgLayer); 
             if (uiControls.animMain && !isGlass) addBreathingAnimation(imgLayer); // Disable breath in Glass
+            
+            // --- Opacity Fade-in Logic for Image (1.5s -> 2.0s) ---
+            // Only if NOT glass mode (Glass is static preview)
+            if(!isGlass) {
+                var op = imgLayer.property("Opacity");
+                while(op.numKeys > 0) op.removeKey(1);
+                op.setValueAtTime(0, 0);
+                op.setValueAtTime(1.5, 0);
+                op.setValueAtTime(2.0, 100);
+            } else {
+                // Ensure visible immediately in Glass Mode
+                var op = imgLayer.property("Opacity");
+                while(op.numKeys > 0) op.removeKey(1);
+                op.setValue(100);
+            }
 
-            addDisclaimerToPreComp(comp, uiControls.disclaimer, forcedDuration, uiControls.showDiscBanner, colorDiscBanner, colorDiscEdge);
+            addDisclaimerToPreComp(comp, uiControls.disclaimer, forcedDuration, uiControls.showDiscBanner, colorDiscBanner, colorDiscEdge, isGlass);
             var dl = findLayer(comp, "Disclaimer Main");
             if(dl) dl.moveBefore(imgLayer);
 
@@ -2631,11 +2776,7 @@ ${linesTxt}----------------------------------------
                  o.setValue(100); s.setValue([100,100]);
                  // Position is already set by updateOrCreateAccent
             } else {
-                 // Normal animation
-                 // addEntranceAnimation is called inside updateOrCreateAccent for keys, but we might need to override if it was called
-                 // updateOrCreateAccent calls it. Let's modify updateOrCreateAccent or handle it here.
-                 // Actually updateOrCreateAccent adds animation by default. 
-                 // Let's remove keys if Glass.
+                 // Normal animation is handled inside updateOrCreateAccent (default 0.3s slide)
             }
             
             if (uiControls.skewMask && uiControls.enableShine) {
@@ -2644,7 +2785,7 @@ ${linesTxt}----------------------------------------
                 var off = parseFloat(uiControls.shineOffset) || 0;
                 // Force static if Glass Mode
                 var sStatic = isGlass ? true : uiControls.shineStatic;
-                createShineLayer(comp, 1080, true, colorShine, sw, sp, uiControls.shineGlow, sStatic, off);
+                createShineLayer(comp, 1080, true, colorShine, sw, sp, uiControls.shineGlow, sStatic, off, isGlass);
             } else {
                 var sL = findLayer(comp, "Shine Line"); if(sL) sL.remove();
             }
@@ -2673,7 +2814,7 @@ ${linesTxt}----------------------------------------
         if (isGlass) { while(t1.property("Position").numKeys > 0) t1.property("Position").removeKey(1); while(t1.property("Opacity").numKeys > 0) t1.property("Opacity").removeKey(1); t1.property("Opacity").setValue(100); }
 
         // Reduced padding from 70 to 40
-        var boxW = t1Rect.width + 40; var boxH = t1Rect.height + 10;       
+        var boxW = t1Rect.width + 40; var boxH = t1Rect.height + 10;        
         var b1Obj = updateOrCreateTrapezoid(comp, "Box 1", color1, rightAlignX, cursorY, boxW, boxH, uiControls.skewT1); b1Obj.layer.moveAfter(t1); 
         if (b1Obj.isNew && !isGlass) addEntranceAnimation(b1Obj.layer, 0.5, "slide", 0.8);
         if (isGlass) { while(b1Obj.layer.property("Position").numKeys > 0) b1Obj.layer.property("Position").removeKey(1); while(b1Obj.layer.property("Opacity").numKeys > 0) b1Obj.layer.property("Opacity").removeKey(1); b1Obj.layer.property("Opacity").setValue(100); }
@@ -2876,16 +3017,23 @@ ${linesTxt}----------------------------------------
             bulletStyle: "${bulletStyle}",
             animType: "${animType}",
             animMain: ${animMain},
-            animBG: ${animBG}
+            animBG: ${animBG},
+            mediaFolderPath: ${safeStr(mediaFolderPath)},
+            mediaMainFileName: ${safeStr(mediaMainFileName)},
+            mediaBgFileName: ${safeStr(mediaBgFileName)},
+            hasAudio: ${hasAudio}
         };
 
         var comp = createHDComp("Auto Graphics Comp", calcDur, 24);
         
         // Import Prompts
-        importAudioFromDialog("PUT AUDIO HERE");
-        importMediaFromDialog("BG IMAGE HERE", "center"); 
+        if (config.hasAudio) {
+            importAudioFromDialog("PUT AUDIO HERE");
+        }
+        
+        importMediaFromDialog("BG IMAGE HERE", "center", config.mediaFolderPath, config.mediaBgFileName); 
         if (!config.disableGraphic) {
-             importMediaFromDialog("PLACE IMAGE HERE", "${imgAlign}");
+             importMediaFromDialog("PLACE IMAGE HERE", "${imgAlign}", config.mediaFolderPath, config.mediaMainFileName);
         }
 
         createGraphics(comp, config, calcDur);
@@ -2903,7 +3051,7 @@ ${linesTxt}----------------------------------------
         const blob = new Blob([scriptStr], { type: 'application/octet-stream' });
         const link = document.createElement('a');
         link.href = window.URL.createObjectURL(blob);
-        link.download = "bullets_clean_v60.jsx";
+        link.download = "BULLETS AFTER DEMO.jsx";
         document.body.appendChild(link); 
         link.click();
         document.body.removeChild(link);
@@ -2912,8 +3060,8 @@ ${linesTxt}----------------------------------------
     function downloadAllAsZip() {
         var zip = new JSZip();
         var rootFolder = zip.folder("Graphics_Package");
-        rootFolder.file("bullets_clean_v60.jsx", generateAEScriptContent());
-        rootFolder.file("order_form.txt", generateEmailTemplateContent());
+        rootFolder.file("BULLETS AFTER DEMO.jsx", generateAEScriptContent());
+        rootFolder.file("BULLETS FORM DEMO.txt", generateEmailTemplateContent());
         
         zip.generateAsync({type:"blob"}).then(function(content) {
             const link = document.createElement('a');
