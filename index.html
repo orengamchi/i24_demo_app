@@ -119,16 +119,6 @@
                 <header class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
                     <h2 class="text-2xl font-bold text-white" id="main-form-title">📝 טופס הזמנה</h2>
                 </header>
-                
-                <div class="mb-6">
-                    <button type="button" onclick="openEditorWithParams()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 px-6 rounded-lg shadow-lg transition-all transform hover:scale-[1.02] flex justify-center items-center gap-3 border border-blue-400/30">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                        <span class="text-lg">פתח בתוכנת העריכה (טען נתונים)</span>
-                    </button>
-                    <p class="text-xs text-gray-400 text-center mt-2">פותח את עורך הגרפיקה בחלון חדש עם כל הנתונים שמולאו למטה</p>
-                </div>
 
                 <p id="live-datetime" class="text-gray-400 text-sm mb-6 text-center" dir="ltr"></p>
                 
@@ -166,7 +156,6 @@
                                 <input type="checkbox" id="glass-wall-mode" class="h-5 w-5 text-blue-500 rounded border-gray-300 focus:ring-blue-500">
                                 <label for="glass-wall-mode" class="text-sm text-gray-300 mr-2">מצב קיר זכוכית</label>
                             </div>
-                            <!-- החזרת גודל פונט -->
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">גודל פונט כותרת:</label>
                                 <input type="number" id="title-font-size" class="input-style" value="135">
@@ -180,7 +169,6 @@
                                     <option value="hidden">ללא</option>
                                 </select>
                             </div>
-                            <!-- הוספת אנימציית בולטים -->
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">אנימציית בולטים:</label>
                                 <select id="bullet-animation" class="select-style">
@@ -229,7 +217,6 @@
                                     <input type="text" id="main-image-path" class="input-style mt-2 text-xs" placeholder="נתיב הקובץ..." readonly>
                                 </div>
                             </div>
-                            <!-- החזרת קישור תמונת רקע -->
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">קישור תמונת רקע:</label>
                                 <input type="text" id="bg-image-link" class="input-style" placeholder="[הדבק קישור כאן]">
@@ -252,17 +239,16 @@
                         <textarea id="disclaimer-text" class="w-full bg-transparent text-xs text-gray-400 text-center border-none focus:ring-0 resize-none overflow-hidden" rows="2">* הטופס מיועד לשימוש פנימי בלבד. אנא ודאו כי כל הפרטים נכונים לפני השליחה.</textarea>
                     </div>
 
-                    <!-- כפתור שמירה תחתון -->
+                    <!-- כפתורי פעולה תחתונים -->
                     <div class="flex flex-col gap-3 mt-4 pt-4 border-t border-gray-700">
+                        <button type="button" onclick="openEditorWithParams()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-[1.01] flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-eye"></i>
+                            לחץ לתצוגה
+                        </button>
                         <button type="button" onclick="saveFormAsText()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex justify-center items-center gap-2">
                             <i class="fa-solid fa-floppy-disk"></i>
                             שמור כקובץ טקסט
                         </button>
-                        
-                        <a href="https://raw.githack.com/orengamchi/i24_demo_app/refs/heads/main/after_coder_v36_clean_demo.html" target="_blank" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex justify-center items-center gap-2 mt-2">
-                            <i class="fa-brands fa-github"></i>
-                            פתח ממשק מעצבים (GitHub)
-                        </a>
                     </div>
                 </form>
                 
@@ -643,7 +629,7 @@
                 }
             }
             
-            // שינוי הקישור לעורך ל-URL החדש (raw.githack.com)
+            // שינוי הקישור לעורך ל-raw.githack.com
             const editorBaseUrl = 'https://raw.githack.com/orengamchi/i24_demo_app/refs/heads/main/after_coder_v36_clean_demo.html';
             
             const params = new URLSearchParams();
