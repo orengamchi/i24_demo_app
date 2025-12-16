@@ -1,0 +1,3076 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BULLETS DEMO</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --sidebar-bg: #ffffff;
+            --header-bg: #343a40;
+            --header-text: #fff;
+            --accent-color: #4a90e2;
+            --border-color: #e9ecef;
+            --active-green: #2ecc71;
+            --text-color: #495057;
+            --error-red: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            height: 100vh;
+            height: 100dvh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            overflow: hidden;
+            height: 100%;
+            flex-direction: row;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 420px; 
+            background-color: var(--sidebar-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            height: 100%;
+        }
+
+        .main-header {
+            background: var(--header-bg);
+            color: var(--header-text);
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.1em;
+            flex-shrink: 0;
+            border-bottom: 3px solid var(--accent-color);
+        }
+
+        /* Top Controls (Reporter) */
+        .top-controls {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-around; /* Space out the icons */
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Custom Icon Buttons */
+        .control-icon-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 10px;
+            width: 100%;
+            transition: all 0.2s;
+            text-align: center;
+            color: #495057;
+        }
+
+        .control-icon-btn:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .control-icon-btn svg {
+            width: 28px;
+            height: 28px;
+            margin-bottom: 5px;
+        }
+
+        .control-icon-btn span {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Glass Mode Button */
+        .glass-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #f1f3f5;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            color: #495057;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .glass-btn.active {
+            background-color: #e8f5e9;
+            border-color: var(--active-green);
+            color: var(--active-green);
+        }
+
+        .glass-btn svg { width: 20px; height: 20px; fill: currentColor; }
+
+        /* Scrollable Content Area */
+        .scroll-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: #ccc transparent;
+        }
+        
+        .scroll-content::-webkit-scrollbar { width: 6px; }
+        .scroll-content::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 3px; }
+
+        /* Accordion Styles */
+        .control-group {
+            background: #f8f9fa;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .control-group h3 {
+            margin: 0;
+            padding: 12px 15px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+            background-color: #e9ecef;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            border-left: 4px solid transparent;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .control-group h3:hover {
+            background-color: #dee2e6;
+        }
+
+        .control-group.open h3 {
+            background-color: #fff;
+            border-bottom: 1px solid #dee2e6;
+            border-left-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .control-group h3::after {
+            content: '◀'; 
+            font-size: 10px;
+            color: #adb5bd;
+            transition: transform 0.3s;
+        }
+
+        .control-group.open h3::after {
+            transform: rotate(-90deg);
+        }
+
+        .group-content {
+            padding: 15px;
+            background: #fff;
+            display: none;
+        }
+
+        .control-group.open .group-content {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Form Elements */
+        .input-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+        
+        .input-wrapper { flex: 1; }
+
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #343a40;
+        }
+
+        input[type="text"], input[type="number"], input[type="password"], textarea, select {
+            width: 100%;
+            padding: 8px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: inherit;
+            font-size: 13px;
+            transition: border-color 0.2s;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.15);
+        }
+        
+        #apiKeyInput {
+            background-color: #f8f9fa;
+            font-family: monospace;
+            direction: ltr;
+        }
+        
+        .error-border {
+            border: 2px solid var(--error-red) !important;
+            background-color: #fdecea !important;
+            animation: shake 0.3s;
+        }
+        
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        /* Color Picker */
+        .color-picker-wrapper {
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+            border: 1px solid #ced4da;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        input[type="color"] {
+            width: 150%; height: 150%; padding: 0; border: none;
+            transform: translate(-25%, -25%); cursor: pointer;
+        }
+
+        /* Checkboxes */
+        .checkbox-label {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            margin-bottom: 6px;
+            color: #6c757d;
+        }
+        .checkbox-label input:checked + span { color: var(--active-green); font-weight: 600; }
+        
+        /* File Upload Button Style */
+        .file-upload-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+        .file-upload-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .file-btn {
+            background: #fff;
+            border: 1px dashed #accent-color;
+            color: var(--accent-color);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            width: 100%;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .file-btn:hover { background: #f0f8ff; }
+        .file-btn.active { background: #e8f5e9; border-color: var(--active-green); color: var(--active-green); }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        /* Preview Area */
+        .preview-area {
+            flex: 1;
+            background-color: #212529;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden; 
+        }
+
+        canvas {
+            background-color: #000;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            max-height: 100%;
+            aspect-ratio: 16 / 9;
+            object-fit: contain;
+        }
+
+        .play-overlay { position: absolute; bottom: 30px; left: 30px; z-index: 10; }
+        .play-btn {
+            width: 50px; height: 50px; border-radius: 50%;
+            background-color: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.8);
+            color: white; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px); transition: all 0.3s;
+        }
+        .play-btn:hover { background-color: var(--accent-color); transform: scale(1.1); border-color: transparent; }
+        .play-btn svg { fill: white; width: 20px; height: 20px; margin-left: 3px; }
+
+        /* Footer Buttons */
+        .btn-container {
+            padding: 15px;
+            background: #fff;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-shrink: 0;
+            z-index: 5;
+        }
+
+        .action-btn {
+            padding: 12px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none; border-radius: 5px;
+            font-size: 14px; font-weight: 600;
+            cursor: pointer; text-align: center;
+            transition: background 0.2s;
+        }
+        
+        .ae-btn { background-color: #6610f2; } .ae-btn:hover { background-color: #520dc2; }
+        .secondary-btn { padding: 8px; background: #495057; color: white; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-size: 13px; text-align: center; }
+        .secondary-btn:hover { background: #343a40; }
+
+        .copyright-footer { margin-top: 5px; text-align: center; font-size: 11px; color: #adb5bd; }
+
+        /* Mobile Adjustments - Scrolling Fixed */
+        @media (max-width: 900px) {
+            body { 
+                padding: 0; 
+                height: 100dvh; 
+                overflow: hidden; /* Prevent body scroll */
+            }
+            .container { 
+                flex-direction: column; /* Normal column direction */
+                height: 100%; 
+                border-radius: 0; 
+            }
+            .preview-area { 
+                flex: 0 0 35vh; /* Fixed top height */
+                width: 100%;
+                border-bottom: 4px solid var(--accent-color); 
+                background: #111; 
+                z-index: 10;
+            }
+            .sidebar { 
+                flex: 1; /* Take remaining space */
+                width: 100%; 
+                border-left: none; 
+                overflow-y: auto; /* Main scroll for mobile */
+                display: flex;
+                flex-direction: column;
+                /* IMPORTANT: Ensures smooth scrolling on iOS */
+                -webkit-overflow-scrolling: touch;
+            }
+            /* Disable internal scrolling on mobile, let the sidebar parent handle it */
+            .scroll-content { 
+                overflow: visible;
+                flex: none; 
+                height: auto;
+                padding-bottom: 20px;
+            }
+            /* Ensure fixed elements flow naturally */
+            .main-header, .top-controls, .btn-container {
+                flex-shrink: 0;
+            }
+            .play-btn { width: 40px; height: 40px; }
+        }
+        
+        .icon-btn { display: none; } /* Hide Audio Buttons */
+        
+        /* Show the Key file load button specifically */
+        #apiKeyInput + .icon-btn { display: flex; }
+        
+        #extraLines { display: none; margin-top: 5px; border-top: 1px dashed #ccc; padding-top: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Sidebar Controls -->
+    <div class="sidebar">
+        <div class="main-header">BULLETS DEMO</div>
+        
+        <!-- TOP Separate Controls -->
+        <div class="top-controls">
+            <!-- Load File Button (Green Arrow) -->
+            <label for="reporterFile" class="control-icon-btn" title="טען טופס ריפורטר">
+                <svg viewBox="0 0 24 24">
+                    <path fill="#2ecc71" d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/>
+                </svg>
+                <span>טען טופס</span>
+                <input type="file" id="reporterFile" accept=".txt" style="display:none;" onchange="loadReporterFile()">
+            </label>
+
+            <!-- Download Form Button (Red Arrow) -->
+            <div class="control-icon-btn" onclick="downloadEmailTemplate()" title="הורד טופס הזמנה">
+                <svg viewBox="0 0 24 24">
+                    <path fill="#e74c3c" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                </svg>
+                <span>הורד טופס</span>
+            </div>
+        </div>
+
+        <div class="scroll-content">
+            
+            <!-- Group 1: API & Data -->
+            <div class="control-group" id="group-api">
+                <h3 onclick="toggleAccordion('group-api')">ניהול נתונים ו-API</h3>
+                <div class="group-content">
+                    <label>Google Gemini API Key:</label>
+                    <div style="display:flex; gap:5px;">
+                        <input type="password" id="apiKeyInput" placeholder="Paste Key Here..." onchange="updateApiKey()" oninput="updateApiKey()">
+                        <label for="apiKeyFile" class="icon-btn" title="Load Key from TXT" style="width:40px; cursor:pointer;">
+                            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                        </label>
+                        <input type="file" id="apiKeyFile" accept=".txt" style="display:none;" onchange="loadApiKeyFromFile()">
+                    </div>
+                    
+                    <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #dee2e6;">
+                        <label style="margin-bottom:5px;">תמלול אודיו (AI):</label>
+                        <div style="display:flex; gap:10px;">
+                            <!-- Audio Upload Button -->
+                            <label for="audioFileInput" class="control-icon-btn" style="flex:1; padding:6px; height:auto; flex-direction:row; gap:5px;" title="בחר קובץ אודיו">
+                                <svg viewBox="0 0 24 24" style="width:20px; height:20px; margin:0;"><path fill="#4a90e2" d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
+                                <span style="font-size:12px;">טען אודיו</span>
+                                <input type="file" id="audioFileInput" accept="audio/*" style="display:none;">
+                            </label>
+
+                            <!-- Transcribe Button -->
+                            <div class="control-icon-btn" id="transcribeBtn" onclick="transcribeAudio()" style="flex:1; padding: 6px; margin:0; height:auto; flex-direction: row; gap: 5px;">
+                                <svg viewBox="0 0 24 24" style="width:20px; height:20px; margin:0;">
+                                    <path fill="#2ecc71" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 6h-4v2h4v2h-4v2h4v2H9V7h6v2z"/>
+                                </svg>
+                                <span style="font-size:12px;">תמלל</span>
+                            </div>
+                        </div>
+                        <div id="transcribeStatus" style="font-size:11px; color:#666; margin-top:5px; text-align:center;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group 2: Media Uploads -->
+            <div class="control-group open" id="group-media">
+                <h3 onclick="toggleAccordion('group-media')">מדיה (תמונות/וידאו)</h3>
+                <div class="group-content">
+                    <label>תיקיית מדיה (קבצים מקומיים):</label>
+                    <input type="text" id="mediaFolderPath" value="C:\Users\user\Desktop\oren_plugin_demo\MEDIA FILES" placeholder="נתיב לתיקיית המדיה במחשב...">
+                    
+                    <div style="border-top:1px solid #eee; margin:10px 0; padding-top:10px;"></div>
+
+                    <label>תמונה/וידאו ראשי (Main):</label>
+                    <div class="file-upload-wrapper">
+                        <button class="file-btn" id="btnMediaMain">בחר קובץ</button>
+                        <input type="file" accept="image/*,video/*" onchange="handleMediaUpload('main', this)">
+                    </div>
+                    <input type="text" id="mediaMainUrl" placeholder="נתיב/קישור לקובץ ראשי..." style="margin-top:5px; font-size:11px; color:#666;">
+                    <!-- Store filename for AE script -->
+                    <input type="hidden" id="mediaMainFileName">
+
+                    <!-- Image Alignment Option -->
+                    <div style="margin-top:8px; display:flex; gap:10px;">
+                        <label style="font-size:12px; font-weight:normal;">יישור תמונה:</label>
+                        <label class="checkbox-label" style="font-size:12px;">
+                            <input type="radio" name="imgAlign" value="center" onchange="drawPreview(true)"> מרכז
+                        </label>
+                        <label class="checkbox-label" style="font-size:12px;">
+                            <input type="radio" name="imgAlign" value="left" checked onchange="drawPreview(true)"> שליש שמאל (אוטומטי)
+                        </label>
+                    </div>
+                    
+                    <div style="border-top:1px solid #eee; margin:10px 0; padding-top:10px;"></div>
+
+                    <label>רקע (Background):</label>
+                    <div class="file-upload-wrapper">
+                        <button class="file-btn" id="btnMediaBG">בחר רקע</button>
+                        <input type="file" accept="image/*,video/*" onchange="handleMediaUpload('bg', this)">
+                    </div>
+                    <input type="text" id="mediaBgUrl" placeholder="נתיב/קישור לתמונת רקע..." style="margin-top:5px; font-size:11px; color:#666;">
+                    <input type="hidden" id="mediaBgFileName">
+
+                    <p style="font-size:11px; color:#666; margin-top:5px;">*קבצים אלו יוצגו בתצוגה המקדימה. באפטר יש להשתמש בכפתורי הייבוא בפלאגין.</p>
+                </div>
+            </div>
+
+            <!-- Group 3: General Settings -->
+            <div class="control-group" id="group-general">
+                <h3 onclick="toggleAccordion('group-general')">הגדרות כלליות ועיצוב</h3>
+                <div class="group-content">
+                    <div class="input-row">
+                        <label>משך זמן (Duration):</label>
+                        <select id="durationMode" onchange="drawPreview(true)">
+                            <option value="0">לפי אורך אודיו (Default)</option>
+                            <option value="1" selected>30 שניות</option>
+                            <option value="2">45 שניות</option>
+                            <option value="3">90 שניות</option>
+                        </select>
+                    </div>
+
+                    <div class="input-row">
+                        <label>צבע רקע (גיבוי):</label>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="colorBg" value="#001233" oninput="drawPreview(true)">
+                        </div>
+                    </div>
+                    
+                    <button class="glass-btn" id="btnGlassMode" onclick="toggleGlassMode()">
+                        <svg viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+                        <span>מצב קיר זכוכית (PNG)</span>
+                    </button>
+                    <!-- Hidden Checkbox for Logic -->
+                    <input type="checkbox" id="glassMode" onchange="drawPreview(true)" style="display:none;">
+
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="skewMask" checked onchange="toggleShineSettings(); drawPreview(true)"> 
+                        <span>Skew Mask?</span>
+                    </label>
+
+                    <!-- Image Breathing Animations -->
+                    <div style="margin: 5px 0; padding: 5px; background: #f1f3f5; border-radius: 4px;">
+                         <label class="checkbox-label">
+                            <input type="checkbox" id="animMain" checked onchange="drawPreview(true)">
+                            <span>Animate Main Image</span>
+                        </label>
+                        <!-- Animate BG Checkbox REMOVED per user request -->
+                    </div>
+
+                    <!-- Shine Section -->
+                    <div style="background:#f0f0f0; padding:8px; border-radius:4px; margin-bottom:8px;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="enableShine" checked onchange="toggleShineSettings(); drawPreview(true)"> 
+                            <span>Enable Shine Line</span>
+                        </label>
+                        
+                        <div id="shineSettings" style="margin-top:5px; padding-top:5px; border-top:1px solid #ddd; display:block;">
+                            <div class="input-row">
+                                <label style="font-size:11px;">עובי (px):</label>
+                                <input type="number" id="shineWidth" value="4" step="1" min="1" max="20" style="width:50px; font-size:11px;" onchange="drawPreview(true)">
+                            </div>
+                             <div class="input-row">
+                                <label style="font-size:11px;">תיקון מיקום X (offset):</label>
+                                <input type="number" id="shineOffset" value="0" step="1" style="width:50px; font-size:11px;" onchange="drawPreview(true)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="disableGraphic" onchange="validateTitleInput(document.getElementById('title1')); drawPreview(true)"> 
+                        <span>Hide Graphic / 30 Chars</span>
+                    </label>
+                    
+                    <div style="background:#fff3cd; padding:8px; border-radius:4px; margin-bottom:8px; border:1px solid #ffeeba;">
+                        <div class="input-row">
+                            <div class="input-wrapper">
+                                <label>דיסקליימר:</label>
+                                <input type="text" id="disclaimer" value="דיסקליימר - פלאש 90" onchange="drawPreview(true)">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="invertColors" onchange="drawPreview(true)"> 
+                        <span>Invert List Colors</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Group 4: Titles -->
+            <div class="control-group" id="group-titles">
+                <h3 onclick="toggleAccordion('group-titles')">כותרות</h3>
+                <div class="group-content">
+                    <label>כותרת ראשית:</label>
+                    <div class="input-row">
+                        <div class="input-wrapper">
+                             <textarea id="title1" rows="2" placeholder="Text here..." onchange="validateTitleInput(this); drawPreview(true)">מדבר גלובלי
+הדיון העולמי</textarea>
+                        </div>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="color1" value="#0000FF" oninput="drawPreview(true)">
+                        </div>
+                    </div>
+                    
+                    <div class="input-row" style="margin-top:5px;">
+                        <label style="flex:0 0 auto;">גודל פונט:</label>
+                        <input type="range" id="title1Size" min="80" max="250" value="135" step="1" oninput="document.getElementById('t1SizeVal').innerText=this.value; drawPreview(true);" style="flex:1; margin:0 10px;">
+                        <span id="t1SizeVal" style="font-size:12px; width:25px;">135</span>
+                    </div>
+
+                    <div style="display:flex; gap:15px; margin-bottom:10px;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="skewTitle1" checked onchange="drawPreview(true)"> 
+                            <span>Skew Box?</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hideBoxTitle1" onchange="drawPreview(true)"> 
+                            <span>הסתר רקע (Box)</span>
+                        </label>
+                    </div>
+
+                    <label>כותרת משנה:</label>
+                    <div class="input-row">
+                        <div class="input-wrapper">
+                            <input type="text" id="title2" value="מבזק מיוחד" onchange="drawPreview(true)">
+                        </div>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="color2" value="#87CEFA" oninput="drawPreview(true)">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:15px;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="skewTitle2" checked onchange="drawPreview(true)"> 
+                            <span>Skew Box?</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hideBoxTitle2" onchange="drawPreview(true)"> 
+                            <span>הסתר רקע (Box)</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="disableTitle2" onchange="drawPreview(true)"> 
+                            <span>בטל כותרת</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group 5: Content List -->
+            <div class="control-group" id="group-content">
+                <h3 onclick="toggleAccordion('group-content')">רשימת בולטים (תוכן)</h3>
+                <div class="group-content">
+                    <div class="input-row">
+                         <label>צבע באנר:</label>
+                         <div class="color-picker-wrapper">
+                            <input type="color" id="colorInst" value="#2A427C" oninput="drawPreview(true)">
+                        </div>
+                    </div>
+                    
+                    <div class="input-row">
+                        <div style="flex:1;">
+                             <label>צורת בולט:</label>
+                            <select id="bulletStyle" onchange="drawPreview(true)">
+                                <option value="none">מספרים</option>
+                                <option value="square">ריבוע ■</option>
+                                <option value="circle">עיגול ●</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                             <label>אנימציה:</label>
+                            <select id="animType" onchange="drawPreview(true)">
+                                <option value="slide">Slide</option>
+                                <option value="scale">Scale</option>
+                                <option value="fade">Fade</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label>מהירות (ללא אודיו):</label>
+                        <input type="number" id="listAnimSpeed" value="1.0" step="0.1" min="0.1" max="10.0" style="width: 60px;" onchange="drawPreview(true)">
+                    </div>
+                    
+                    <div style="display:flex; gap:15px; margin-bottom:10px;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="skewInst" checked onchange="drawPreview(true)"> 
+                            <span>Skew?</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="hideInstBanners" onchange="drawPreview(true)"> 
+                            <span>הסתר רקע</span>
+                        </label>
+                    </div>
+
+                    <div id="linesContainer">
+                        <!-- Line 1 -->
+                        <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableLine1" checked onchange="toggleLineInputs(); drawPreview(true)"> 
+                                    <span>שורה 1</span>
+                                </label>
+                            </div>
+                            <textarea id="inst1" rows="2" onchange="drawPreview(true)">בחר ערכת נושא מהתפריט.</textarea>
+                        </div>
+
+                        <!-- Line 2 -->
+                        <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableLine2" checked onchange="toggleLineInputs(); drawPreview(true)"> 
+                                    <span>שורה 2</span>
+                                </label>
+                            </div>
+                            <textarea id="inst2" rows="2" onchange="drawPreview(true)">התאם את הכותרות והצבעים.</textarea>
+                        </div>
+
+                        <!-- Line 3 -->
+                        <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableLine3" checked onchange="toggleLineInputs(); drawPreview(true)"> 
+                                    <span>שורה 3</span>
+                                </label>
+                            </div>
+                            <input type="text" id="inst3" value="הזן טקסט לקריינות." onchange="drawPreview(true)">
+                        </div>
+
+                        <!-- Hidden Lines 4-8 -->
+                        <div id="extraLines">
+                            <!-- Line 4 -->
+                            <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableLine4" onchange="toggleLineInputs(); drawPreview(true)"> 
+                                        <span>שורה 4</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="inst4" value="" onchange="drawPreview(true)">
+                            </div>
+
+                            <!-- Line 5 -->
+                            <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableLine5" onchange="toggleLineInputs(); drawPreview(true)"> 
+                                        <span>שורה 5</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="inst5" value="" onchange="drawPreview(true)">
+                            </div>
+
+                            <!-- Line 6 -->
+                            <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableLine6" onchange="toggleLineInputs(); drawPreview(true)"> 
+                                        <span>שורה 6</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="inst6" value="" onchange="drawPreview(true)">
+                            </div>
+
+                            <!-- Line 7 -->
+                            <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableLine7" onchange="toggleLineInputs(); drawPreview(true)"> 
+                                        <span>שורה 7</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="inst7" value="" onchange="drawPreview(true)">
+                            </div>
+
+                            <!-- Line 8 -->
+                            <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableLine8" onchange="toggleLineInputs(); drawPreview(true)"> 
+                                        <span>שורה 8</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="inst8" value="" onchange="drawPreview(true)">
+                            </div>
+                        </div>
+                        
+                        <div class="secondary-btn" id="btnToggleLines" onclick="toggleExtraLines()" style="margin-top:10px;">➕ הוסף שורות (4-8)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-container">
+            <button class="action-btn ae-btn" onclick="downloadAEScript()">📜 שלח לעולם</button>
+            <div class="copyright-footer">© Oren Gamchi</div>
+        </div>
+    </div>
+
+    <!-- Preview Canvas -->
+    <div class="preview-area">
+        <canvas id="mainCanvas" width="1920" height="1080"></canvas>
+        <div class="play-overlay">
+            <button class="play-btn" onclick="startAnimation()" title="Play Animation">
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Globals ---
+    let userApiKey = ""; 
+    let activeColorForMenu = null;
+    let globalAudioURL = null; // Store source audio URL
+    let globalAudioDuration = 0; // Store audio duration
+    let currentListScrollY = 0; // Track scroll position
+    let currentDurations = Array(8).fill(1.0); // Global durations array
+    
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    const FIXED_RIGHT_ALIGN_X = 1800;
+    const FIXED_TOP_ALIGN_Y = 200; 
+    const SKEW_ANGLE_DEG = 11;
+    const SKEW_ANGLE_RAD = SKEW_ANGLE_DEG * (Math.PI / 180); 
+    
+    // H_TITLE1_FONT is now dynamic
+    const GAP_TITLE1_TITLE2 = 30; 
+    const H_TITLE2 = 100;
+    const GAP_TITLE2_INST = 80; 
+    const H_INST = 65;
+    const GAP_INST_LINES = 20;
+
+    let animId = null;
+    let animStartTime = 0;
+    
+    // Video Presets Data
+    // Using raw.githubusercontent.com for direct file access
+    const presetBackgrounds = [
+        { name: "הישראלים", url: "https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%94%D7%99%D7%A9%D7%A8%D7%90%D7%9C%D7%99%D7%9D_1.mp4" },
+        { name: "מדברים חדשות", url: "https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%9E%D7%93%D7%91%D7%A8%D7%99%D7%9D%20%D7%97%D7%93%D7%A9%D7%95%D7%AA_1.mp4" },
+        { name: "מועדון עסקי", url: "https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%9E%D7%95%D7%A2%D7%93%D7%95%D7%9F%20%D7%A2%D7%A1%D7%A7%D7%99_1.mp4" },
+        { name: "ערביסטים", url: "https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A2%D7%A8%D7%91%D7%99%D7%A1%D7%98%D7%99%D7%9D_1.mp4" },
+        { name: "מהדורה", url: "https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%9E%D7%94%D7%93%D7%95%D7%A8%D7%94.mp4" }
+    ];
+
+    // Media State
+    const mediaState = {
+        main: { type: null, element: null, fileName: null }, 
+        bg: { type: null, element: null, fileName: null }
+    };
+    
+    // Smooth BG transition state
+    let bgTransition = {
+        active: false,
+        startTime: 0,
+        duration: 800, // ms
+        oldElement: null,
+        oldType: null,
+        oldColor: null
+    };
+
+    // --- Media Check Helper ---
+    function isMediaReady(element) {
+        if (!element) return false;
+        if (element.tagName === 'IMG') {
+            return element.complete && element.naturalWidth !== 0;
+        }
+        if (element.tagName === 'VIDEO') {
+            return element.readyState >= 2; // HAVE_CURRENT_DATA
+        }
+        return false;
+    }
+
+    // --- Init ---
+    window.onload = function() {
+        toggleLineInputs(); 
+        toggleShineSettings(); 
+        // initGallery(); // Removed gallery init
+        
+        // Add Audio Input Listener
+        const audioInput = document.getElementById('audioFileInput');
+        if (audioInput) {
+            audioInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if(file){
+                    // Update label text
+                    const labelSpan = document.querySelector('label[for="audioFileInput"] span');
+                    if(labelSpan) labelSpan.innerText = file.name.substring(0, 15) + "...";
+
+                    const audio = new Audio(URL.createObjectURL(file));
+                    audio.onloadedmetadata = function(){
+                        globalAudioDuration = audio.duration;
+                        // If mode is Audio Duration, redraw to update speeds
+                        if(document.getElementById('durationMode').value == '0') drawPreview(true);
+                    };
+                } else {
+                    globalAudioDuration = 0;
+                      const labelSpan = document.querySelector('label[for="audioFileInput"] span');
+                      if(labelSpan) labelSpan.innerText = "טען אודיו";
+                }
+            });
+        }
+        
+        drawPreview(true); 
+    };
+    
+    // --- UI Helper: Toggle Extra Lines ---
+    function toggleExtraLines() {
+        var el = document.getElementById('extraLines');
+        var btn = document.getElementById('btnToggleLines');
+        if (el.style.display === 'block') {
+            el.style.display = 'none';
+            btn.innerText = '➕ הוסף שורות (4-8)';
+        } else {
+            el.style.display = 'block';
+            btn.innerText = '➖ הסתר שורות (4-8)';
+        }
+    }
+
+    // --- Helper for Safe Access ---
+    function getSafeCheck(id) {
+        var el = document.getElementById(id);
+        return el ? el.checked : false;
+    }
+
+    // --- Toggle Glass Mode Button UI ---
+    function toggleGlassMode() {
+        const checkbox = document.getElementById('glassMode');
+        const btn = document.getElementById('btnGlassMode');
+        checkbox.checked = !checkbox.checked;
+        if(checkbox.checked) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+        drawPreview(true);
+    }
+    
+    function runTransitionLoop() {
+        function step() {
+            if (bgTransition.active) {
+                const now = performance.now();
+                if (now - bgTransition.startTime < bgTransition.duration) {
+                    drawPreview(); 
+                    requestAnimationFrame(step);
+                } else {
+                    bgTransition.active = false;
+                    bgTransition.oldElement = null; 
+                    drawPreview();
+                }
+            }
+        }
+        step();
+    }
+    
+    // --- Accordion Logic ---
+    function toggleAccordion(groupId) {
+        const groups = document.querySelectorAll('.control-group');
+        const clickedGroup = document.getElementById(groupId);
+        const isOpen = clickedGroup.classList.contains('open');
+        groups.forEach(g => g.classList.remove('open'));
+        if (!isOpen) clickedGroup.classList.add('open');
+    }
+    
+    function toggleShineSettings() {
+        const skewMask = document.getElementById('skewMask').checked;
+        const enableShine = document.getElementById('enableShine');
+        const settings = document.getElementById('shineSettings');
+        
+        enableShine.disabled = !skewMask;
+        
+        if (skewMask && enableShine.checked) {
+            settings.style.display = "block";
+            // Hidden controls for color/static/glow - settings active by default
+        } else {
+            settings.style.display = "none";
+        }
+    }
+
+    function updateApiKey() {
+        const input = document.getElementById('apiKeyInput');
+        userApiKey = input.value;
+        if (userApiKey) input.classList.remove('error-border');
+    }
+    
+    function loadApiKeyFromFile() {
+        const fileInput = document.getElementById('apiKeyFile');
+        if(fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result.trim();
+                if(content) {
+                    document.getElementById('apiKeyInput').value = content;
+                    userApiKey = content;
+                    document.getElementById('apiKeyInput').classList.remove('error-border');
+                    alert("המפתח נטען בהצלחה!");
+                }
+            };
+            reader.readAsText(file);
+            fileInput.value = "";
+        }
+    }
+    
+    function getActiveKey() { return userApiKey || ""; }
+    
+    // --- Media Handler (HTML) ---
+    function handleMediaUpload(slot, input) {
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const url = URL.createObjectURL(file);
+            const type = file.type.startsWith('video/') ? 'video' : 'image';
+            
+            // Store filename for AE export
+            if(slot === 'main') {
+                document.getElementById('mediaMainFileName').value = file.name;
+            } else if (slot === 'bg') {
+                document.getElementById('mediaBgFileName').value = file.name;
+            }
+
+            setRemoteMedia(slot, url, type);
+            
+            const btn = (slot === 'main') ? document.getElementById('btnMediaMain') : document.getElementById('btnMediaBG');
+            if(btn) {
+                btn.innerText = "קובץ נבחר: " + file.name.substring(0, 10) + "...";
+                btn.classList.add('active');
+            }
+        }
+    }
+    
+    function setRemoteMedia(slot, url, forcedType) {
+        // Simple type detection if forcedType not provided
+        let type = forcedType;
+        if (!type) {
+            if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) type = 'video';
+            else type = 'image';
+        }
+        
+        let elem;
+        if (type === 'video') {
+            elem = document.createElement('video');
+            elem.src = url;
+            elem.crossOrigin = "anonymous"; // Important for remote videos on canvas
+            elem.muted = true;
+            elem.loop = true;
+            
+            // Wait for video to be ready to play
+            elem.onloadeddata = () => {
+                 elem.play().catch(e => console.log("Video autoplay blocked/failed:", e));
+                 drawPreview(true);
+            };
+        } else {
+            elem = new Image();
+            elem.crossOrigin = "anonymous";
+            elem.src = url;
+            elem.onload = () => drawPreview(true);
+        }
+
+        if (slot === 'bg') {
+            bgTransition.active = true;
+            bgTransition.startTime = performance.now();
+            bgTransition.oldElement = mediaState.bg.element;
+            bgTransition.oldType = mediaState.bg.type;
+            bgTransition.oldColor = document.getElementById('colorBg').value;
+            
+            mediaState[slot] = { type: type, element: elem };
+            runTransitionLoop();
+        } else {
+            mediaState[slot] = { type: type, element: elem };
+        }
+        
+        // Immediate redraw attempt (might fail if not loaded, but good for instant feedback if cached)
+        drawPreview(true);
+    }
+
+    // --- Reporter File Logic ---
+    function loadReporterFile() {
+        const fileInput = document.getElementById('reporterFile');
+        if(fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) { parseReporterText(e.target.result); };
+            reader.readAsText(file);
+        }
+    }
+
+    function updateButtonUI(btnId, fileName) {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.innerText = "קובץ נבחר: " + fileName.substring(0, 10) + "...";
+            btn.classList.add('active');
+        }
+    }
+
+    function parseReporterText(text) {
+        const getValue = (key) => {
+            const regex = new RegExp(key + ":\\s*([\\s\\S]*?)(?=\\r?\\n(?:.*?:|-{3,}|$))", "i");
+            const match = text.match(regex);
+            if (!match || !match[1]) return "";
+            let val = match[1].trim();
+            if (val.includes("[הקלד כאן]")) return ""; 
+            return val;
+        };
+
+        const t1 = getValue("כותרת ראשית");
+        const t2 = getValue("כותרת משנה");
+        const media1 = getValue("קישור תמונה ראשית");
+        const media2 = getValue("קישור תמונת רקע");
+        const glassModeVal = getValue("מצב קיר זכוכית");
+        const editionName = getValue("שם המהדורה") || getValue("רקע מהדורה"); // Fallback
+        const titleSize = getValue("גודל פונט כותרת");
+        
+        if (t1) document.getElementById('title1').value = t1;
+        if (t2) document.getElementById('title2').value = t2;
+        if (media1) {
+            document.getElementById('mediaMainUrl').value = media1;
+            setRemoteMedia('main', media1);
+            // NEW: Extract filename from URL/Path for AE script
+            try {
+                // Normalize slashes to forward slashes for splitting
+                var cleanPath = media1.replace(/\\/g, '/');
+                
+                // Extract Folder Path (Remove filename)
+                var lastSlashIndex = cleanPath.lastIndexOf('/');
+                if (lastSlashIndex !== -1) {
+                    var folderPath = cleanPath.substring(0, lastSlashIndex);
+                    document.getElementById('mediaFolderPath').value = folderPath;
+                }
+
+                var parts = cleanPath.split('/');
+                var fName = parts[parts.length - 1];
+                document.getElementById('mediaMainFileName').value = fName;
+                updateButtonUI('btnMediaMain', fName);
+            } catch(e) {}
+        }
+        
+        if (media2) {
+            document.getElementById('mediaBgUrl').value = media2;
+            setRemoteMedia('bg', media2);
+            // NEW: Extract filename for BG
+            try {
+                var cleanPath = media2.replace(/\\/g, '/');
+                var parts = cleanPath.split('/');
+                var fName = parts[parts.length - 1];
+                document.getElementById('mediaBgFileName').value = fName;
+                updateButtonUI('btnMediaBG', fName);
+            } catch(e) {}
+        }
+        
+        // Parse New Fields
+        if (glassModeVal.includes("כן")) {
+            document.getElementById('glassMode').checked = true;
+            document.getElementById('btnGlassMode').classList.add('active');
+        } else {
+            document.getElementById('glassMode').checked = false;
+            document.getElementById('btnGlassMode').classList.remove('active');
+        }
+
+        if (titleSize) {
+             const size = parseInt(titleSize);
+             if(!isNaN(size)) {
+                document.getElementById('title1Size').value = size;
+                document.getElementById('t1SizeVal').innerText = size;
+             }
+        }
+
+        // Logic for auto-detecting edition background
+        if (editionName) {
+             // Find matching preset
+             const preset = presetBackgrounds.find(p => editionName.includes(p.name)); 
+             if(preset) {
+                 setRemoteMedia('bg', preset.url);
+                 document.getElementById('mediaBgUrl').value = preset.url;
+                 
+                 // Try to guess local filename from URL
+                 // Example URL: .../%D7%94%D7%99%D7%A9%D7%A8%D7%90%D7%9C%D7%99%D7%9D_1.mp4
+                 try {
+                     var urlParts = preset.url.split('/');
+                     var fileNameEncoded = urlParts[urlParts.length - 1];
+                     var fileName = decodeURIComponent(fileNameEncoded);
+                     document.getElementById('mediaBgFileName').value = fileName;
+                     updateButtonUI('btnMediaBG', fileName);
+                 } catch(e) {}
+             }
+        }
+        
+        // Parse Bullet Style Section
+        const bulletsRegex = /צורת בולטים[\s\S]*?(?:-{3,}|$)/i;
+        const bulletsMatch = text.match(bulletsRegex);
+        if (bulletsMatch) {
+            const bulletsSection = bulletsMatch[0];
+            const hasSquare = bulletsSection.includes("ריבוע");
+            const hasCircle = bulletsSection.includes("עיגול");
+            const hasNumber = bulletsSection.includes("מספרים");
+            
+            let count = (hasSquare ? 1 : 0) + (hasCircle ? 1 : 0) + (hasNumber ? 1 : 0);
+            
+            if (count === 1) {
+                if (hasSquare) document.getElementById('bulletStyle').value = 'square';
+                else if (hasCircle) document.getElementById('bulletStyle').value = 'circle';
+                else if (hasNumber) document.getElementById('bulletStyle').value = 'none';
+            }
+        }
+
+        // NEW: Parse Bullet Animation Section
+        const animRegex = /אנימציית בולטים[\s\S]*?(?:-{3,}|$)/i;
+        const animMatch = text.match(animRegex);
+        if (animMatch) {
+            const animSection = animMatch[0];
+            const hasSlide = animSection.includes("Slide");
+            const hasScale = animSection.includes("Scale");
+            const hasFade = animSection.includes("Fade");
+            
+            let aCount = (hasSlide ? 1 : 0) + (hasScale ? 1 : 0) + (hasFade ? 1 : 0);
+            if (aCount === 1) {
+                if (hasSlide) document.getElementById('animType').value = 'slide';
+                else if (hasScale) document.getElementById('animType').value = 'scale';
+                else if (hasFade) document.getElementById('animType').value = 'fade';
+            }
+        }
+
+        let hasExtraLines = false;
+        for (let i = 1; i <= 8; i++) {
+            const val = getValue("סעיף " + i);
+            document.getElementById('inst' + i).value = val;
+            document.getElementById('enableLine' + i).checked = (val !== "");
+            
+            if (i >= 4 && val !== "") hasExtraLines = true;
+        }
+        
+        if (hasExtraLines) {
+            document.getElementById('extraLines').style.display = 'block';
+            document.getElementById('btnToggleLines').innerText = '➖ הסתר שורות (4-8)';
+        }
+
+        toggleLineInputs(); 
+        drawPreview(true);
+        alert("הנתונים נטענו והמדיה הופעלה בהצלחה!");
+    }
+
+    // --- Email Template ---
+    function generateEmailTemplateContent() {
+        const date = new Date().toLocaleDateString('he-IL');
+        const time = new Date().toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'});
+        const mediaMain = document.getElementById('mediaMainUrl').value;
+        const mediaBg = document.getElementById('mediaBgUrl').value;
+        const isGlass = document.getElementById('glassMode').checked ? "כן" : "לא";
+        
+        const t1Size = document.getElementById('title1Size').value;
+        
+        let linesTxt = "";
+        for (let i = 1; i <= 8; i++) {
+            linesTxt += `סעיף ${i}:\n[הקלד כאן]\n\n`;
+        }
+        
+        return `נושא: טופס הזמנה - בולטים (מהדורת ${date})
+----------------------------------------
+פרטי הזמנה:
+שם השולח/כתב: [הקלד כאן]
+שם המהדורה: [הקלד כאן]
+תאריך שידור: ${date}
+שעת שידור משוערת: ${time}
+----------------------------------------
+מצב קיר זכוכית: ${isGlass}
+גודל פונט כותרת: ${t1Size}
+----------------------------------------
+צורת בולטים (מחק את המיותר):
+1. מספרים
+2. ריבוע
+3. עיגול
+----------------------------------------
+אנימציית בולטים (מחק את המיותר):
+1. Slide
+2. Scale
+3. Fade
+----------------------------------------
+קבצים מצורפים (סמן ב-X אם רלוונטי):
+[ ] קובץ אודיו (קריינות לגרפיקה)
+[ ] תמונה (רקע או אילוסטרציה)
+[ ] קובץ וידאו
+
+קישור תמונה ראשית: ${mediaMain}
+קישור תמונת רקע: ${mediaBg}
+----------------------------------------
+תוכן הגרפיקה (נא למלא במדויק):
+
+כותרת ראשית:
+[הקלד כאן]
+
+כותרת משנה:
+[הקלד כאן]
+
+${linesTxt}----------------------------------------
+הערות נוספות לגרפיקאי (צבעים/סגנון/דגשים):
+[הקלד כאן]
+`;
+    }
+
+    function downloadEmailTemplate() {
+        const content = generateEmailTemplateContent();
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = "BULLETS FORM DEMO.txt";
+        
+        // Fix for FireFox
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // --- Utils ---
+    function wrapTextToNewLines(str, maxLen) {
+        if (!str || str.length <= maxLen) return str;
+        let result = ''; let words = str.split(' '); let currentLine = '';
+        words.forEach(word => {
+            if ((currentLine + word).length <= maxLen) currentLine += (currentLine === '' ? '' : ' ') + word;
+            else { result += currentLine + '\n'; currentLine = word; }
+        });
+        result += currentLine; return result;
+    }
+    
+    function formatBulletText(text) {
+        let clean = text.replace(/^[\-\*•\d\.]+\s*(נקודה|מספר|bullet|point)?\s*\d*[\.:-]?\s*/i, '').trim();
+        return wrapTextToNewLines(clean, 30);
+    }
+
+    // --- AI & Audio ---
+    async function transcribeAudio() {
+        const fileInput = document.getElementById('audioFileInput');
+        const statusDiv = document.getElementById('transcribeStatus');
+        const keyInput = document.getElementById('apiKeyInput');
+        const key = getActiveKey();
+        
+        if (!key) {
+            keyInput.classList.add('error-border');
+            keyInput.focus();
+            alert("חסר מפתח API! אנא הזן מפתח או טען קובץ.");
+            return;
+        } else {
+            keyInput.classList.remove('error-border');
+        }
+
+        if (!fileInput.files || fileInput.files.length === 0) return alert("Please select an audio file first.");
+        
+        const file = fileInput.files[0];
+        
+        // Store URL for playback
+        if (globalAudioURL) URL.revokeObjectURL(globalAudioURL);
+        globalAudioURL = URL.createObjectURL(file);
+        
+        statusDiv.innerText = "מעלה ומתמלל... (אנא המתן)";
+        
+        try {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                const base64Data = reader.result.split(',')[1];
+                const mimeType = file.type;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`;
+                const promptText = "תפקידך הוא לחלץ טקסט עבור רשימת בולטים מתוך האודיו.\n" +
+                                   "הנחיות:\n" +
+                                   "1. הדובר משתמש בביטוי 'נקודה מספר X' כדי לסמן התחלה של סעיף.\n" +
+                                   "2. אם הדובר אומר 'מבוטל', הסעיף הזה לא ייכלל בפלט.\n" +
+                                   "3. פלוט רק את הטקסט הנקי של הסעיפים התקפים.\n" +
+                                   "4. הפרד כל סעיף בשורה חדשה.\n" +
+                                   "5. ללא מספור וללא כותרות.";
+                const payload = { contents: [{ parts: [ { text: promptText }, { inlineData: { mimeType: mimeType, data: base64Data } } ] }] };
+                const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+                if (data.candidates && data.candidates[0].content) {
+                    const text = data.candidates[0].content.parts[0].text;
+                    const lines = text.split('\n').filter(line => line.trim() !== '');
+                    
+                    let hasExtraLines = false;
+                    for (let i = 0; i < 8; i++) {
+                        if (lines[i]) {
+                            document.getElementById('inst' + (i+1)).value = formatBulletText(lines[i]);
+                            document.getElementById('enableLine' + (i+1)).checked = true;
+                            if (i >= 3) hasExtraLines = true;
+                        }
+                    }
+                    if (hasExtraLines) {
+                        document.getElementById('extraLines').style.display = 'block';
+                        document.getElementById('btnToggleLines').innerText = '➖ הסתר שורות (4-8)';
+                    }
+                    toggleLineInputs();
+                    statusDiv.innerText = "התמלול הושלם! (אודיו מוכן לניגון)";
+                    drawPreview(true);
+                    toggleAccordion('group-content');
+                } else { throw new Error("No text returned"); }
+            };
+            reader.onerror = () => { throw new Error("File reading failed"); };
+        } catch (e) {
+            console.error(e);
+            statusDiv.innerText = "שגיאה: " + e.message;
+            alert("Error: " + e.message);
+        }
+    }
+
+    let playingSources = [];
+
+    function playAudioSequence() {
+        // Cleanup existing sources
+        playingSources.forEach(s => { 
+            if (s.stop) { try{s.stop();}catch(e){} } // Web Audio node
+            else if (s.pause) { s.pause(); s.currentTime = 0; } // HTML Audio Element
+        });
+        playingSources = [];
+
+        // Check for global source (transcribed file)
+        if (globalAudioURL) {
+             const audio = new Audio(globalAudioURL);
+             audio.play().catch(e => console.log("Global audio playback failed", e));
+             playingSources.push(audio);
+             return; // Priority to source audio
+        }
+    }
+
+    // --- Canvas Logic ---
+    function toggleLineInputs() {
+        for (let i = 1; i <= 8; i++) {
+            const en = document.getElementById('enableLine' + i);
+            if (en) setInputState('inst' + i, en.checked);
+        }
+    }
+    
+    function setInputState(id, isEnabled) {
+        const el = document.getElementById(id);
+        if (isEnabled) { el.disabled = false; el.style.opacity = "1"; el.style.backgroundColor = "white"; }
+        else { el.disabled = true; el.style.opacity = "0.5"; el.style.backgroundColor = "#eee"; }
+    }
+
+    function validateTitleInput(textarea) {
+        const lines = textarea.value.split('\n');
+        if (lines.length > 2) textarea.value = lines.slice(0, 2).join('\n');
+    }
+
+    function getLines(text) { return text ? text.split('\n') : []; }
+    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+    function getAnimOffset(currentTime, startTime, duration) {
+        if (currentTime < startTime) return 150;
+        if (currentTime >= startTime + duration) return 0;
+        return 150 * (1 - easeOutCubic((currentTime - startTime) / duration));
+    }
+    
+    function getAnimTransform(currentTime, startTime, duration, type, x, y) {
+        let out = { x: x, y: y, scale: 1, alpha: 1 };
+        let progress = 0;
+        if (currentTime >= startTime + duration) progress = 1;
+        else if (currentTime > startTime) progress = easeOutCubic((currentTime - startTime) / duration);
+        
+        if (type === 'scale') out.scale = progress;
+        else if (type === 'fade') out.alpha = progress;
+        else out.x = x + (150 * (1 - progress));
+        return out;
+    }
+
+    function drawSkewedBoxAndText(textLines, fontSize, color, bgColor, xRight, y, paddingX, paddingY, isBold, useSkew, animTransform, hideBox, bulletType, typeProgress, onlyMeasure) {
+        if (!textLines || textLines.length === 0) return 0;
+        
+        const lineHeight = fontSize * 1.2; 
+        
+        // FIX: Set font before measuring to ensure correct width
+        ctx.font = `${isBold ? 'bold' : ''} ${fontSize}px Arial, sans-serif`;
+
+        let maxTextWidth = 0;
+        if (!onlyMeasure) {
+            textLines.forEach(line => { const m = ctx.measureText(line); if (m.width > maxTextWidth) maxTextWidth = m.width; });
+        } else {
+            textLines.forEach(line => { const m = ctx.measureText(line); if (m.width > maxTextWidth) maxTextWidth = m.width; });
+        }
+
+        const totalTextHeight = textLines.length * lineHeight;
+        const boxHeight = totalTextHeight + (paddingY * 2);
+        
+        if (onlyMeasure) return boxHeight;
+
+        ctx.save();
+        let centerX = xRight; let centerY = y;
+        ctx.translate(centerX, centerY);
+        ctx.scale(animTransform.scale, animTransform.scale);
+        ctx.globalAlpha = animTransform.alpha;
+        ctx.translate(-centerX, -centerY);
+
+        let currentX = animTransform.x; let currentY = animTransform.y;
+        ctx.textBaseline = 'top'; ctx.textAlign = 'right';
+        
+        let bulletSpace = (bulletType && bulletType !== 'none') ? 40 : 0;
+        const boxContentWidth = maxTextWidth + (paddingX * 2) + bulletSpace;
+        const skewOffset = useSkew ? Math.tan(SKEW_ANGLE_RAD) * boxHeight : 0;
+        
+        if (!hideBox) {
+            ctx.beginPath();
+            ctx.moveTo(currentX, currentY);
+            ctx.lineTo(currentX, currentY + boxHeight);
+            ctx.lineTo(currentX - boxContentWidth - skewOffset, currentY + boxHeight); 
+            ctx.lineTo(currentX - boxContentWidth, currentY);
+            ctx.closePath();
+            ctx.fillStyle = bgColor; ctx.fill();
+        }
+
+        if (bulletType === 'square') {
+            ctx.fillStyle = color;
+            let bSize = fontSize * 0.3;
+            ctx.fillRect(currentX - paddingX - bSize, currentY + paddingY + (lineHeight * 0.35), bSize, bSize);
+        } else if (bulletType === 'circle') {
+            ctx.fillStyle = color;
+            let bSize = fontSize * 0.15;
+            ctx.beginPath();
+            ctx.arc(currentX - paddingX - (bSize*2), currentY + paddingY + (lineHeight * 0.5), bSize, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        ctx.fillStyle = color;
+        textLines.forEach((line, index) => {
+            let textToDraw = line;
+            if (typeProgress !== undefined) {
+                textToDraw = line.substring(0, Math.floor(line.length * typeProgress));
+            }
+            ctx.fillText(textToDraw, currentX - paddingX - bulletSpace, currentY + paddingY + (index * lineHeight));
+        });
+        ctx.restore();
+        return boxHeight;
+    }
+
+    function startAnimation() {
+        if (animId) cancelAnimationFrame(animId);
+        animStartTime = performance.now();
+        playAudioSequence();
+        loopAnimation();
+    }
+
+    function loopAnimation() {
+        const now = performance.now();
+        const elapsedSeconds = (now - animStartTime) / 1000;
+        
+        const mode = document.getElementById('durationMode').value;
+        let maxT = 30; // Default
+        if (mode == '0' && globalAudioDuration > 0) maxT = globalAudioDuration;
+        else if (mode == '2') maxT = 45;
+        else if (mode == '3') maxT = 90;
+        
+        drawScene(elapsedSeconds);
+        if (elapsedSeconds < maxT) animId = requestAnimationFrame(loopAnimation);
+        else drawPreview(true);
+    }
+
+    function drawPreview(forceStatic = false) {
+        updateDurations(); // Recalculate durations based on mode
+        
+        if (forceStatic) {
+            if (animId) cancelAnimationFrame(animId);
+            animId = null;
+            currentListScrollY = 0; 
+            drawScene(9999);
+        }
+    }
+    
+    function updateDurations() {
+        const defaultDur = parseFloat(document.getElementById('listAnimSpeed').value) || 1.0;
+        const mode = document.getElementById('durationMode').value;
+        
+        // Reset to default first
+        currentDurations.fill(defaultDur);
+        
+        if (mode == '0' && globalAudioDuration > 0) {
+            let activeCount = 0;
+            for(let i=1; i<=8; i++) { if(getSafeCheck('enableLine'+i) && document.getElementById('inst'+i).value) activeCount++; }
+            
+            if (activeCount > 0) {
+                // Calculate available time for typing
+                // Start delay is roughly 0.9s. If >3 bullets, add 2.0s pause.
+                let reservedTime = 0.9;
+                if (activeCount > 3) reservedTime += 2.0;
+                
+                let availableTime = globalAudioDuration - reservedTime;
+                if (availableTime < activeCount * 0.5) availableTime = activeCount * 0.5; // Min 0.5s per line constraint
+                
+                const timePerLine = availableTime / activeCount;
+                currentDurations.fill(timePerLine);
+            }
+        }
+    }
+
+    function drawScene(time) {
+        const now = performance.now();
+        // CLEAR CANVAS FIRST
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Handle BG Transition or Static BG
+        let bgDrawn = false;
+        if (bgTransition.active) {
+             var p = (now - bgTransition.startTime) / bgTransition.duration;
+             if (p > 1) p = 1;
+             
+             if (bgTransition.oldElement && bgTransition.oldType === 'video' && isMediaReady(bgTransition.oldElement)) {
+                 var img = bgTransition.oldElement;
+                 let scale = Math.max(canvas.width / img.videoWidth, canvas.height / img.videoHeight);
+                 const x = (canvas.width / 2) - (img.videoWidth / 2) * scale;
+                 const y = (canvas.height / 2) - (img.videoHeight / 2) * scale;
+                 ctx.globalAlpha = 1.0;
+                 ctx.drawImage(img, x, y, img.videoWidth * scale, img.videoHeight * scale);
+             } else if (bgTransition.oldColor) {
+                 ctx.fillStyle = bgTransition.oldColor;
+                 ctx.globalAlpha = 1.0;
+                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+             }
+             
+             if (mediaState.bg.element && mediaState.bg.type === 'video' && isMediaReady(mediaState.bg.element)) {
+                 var img = mediaState.bg.element;
+                 let scale = Math.max(canvas.width / img.videoWidth, canvas.height / img.videoHeight);
+                 const x = (canvas.width / 2) - (img.videoWidth / 2) * scale;
+                 const y = (canvas.height / 2) - (img.videoHeight / 2) * scale;
+                 ctx.globalAlpha = p;
+                 ctx.drawImage(img, x, y, img.videoWidth * scale, img.videoHeight * scale);
+             } else {
+                 ctx.fillStyle = document.getElementById('colorBg').value; 
+                 ctx.globalAlpha = p;
+                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+             }
+             ctx.globalAlpha = 1.0; 
+             bgDrawn = true;
+        } 
+        
+        if (!bgDrawn) {
+            if (mediaState.bg.element && isMediaReady(mediaState.bg.element)) {
+                const img = mediaState.bg.element;
+                var w = img.videoWidth || img.width;
+                var h = img.videoHeight || img.height;
+                
+                let scale = Math.max(canvas.width / w, canvas.height / h);
+                const x = (canvas.width / 2) - (w / 2) * scale;
+                const y = (canvas.height / 2) - (h / 2) * scale;
+                ctx.drawImage(img, x, y, w * scale, h * scale);
+            } else {
+                ctx.fillStyle = document.getElementById('colorBg').value; 
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        const breathScale = 1 + (Math.abs(Math.sin(time * 0.5)) * 0.03); 
+        const offAccent = getAnimOffset(time, 0.3, 2.5); 
+        
+        const skewMask = getSafeCheck('skewMask');
+        const enableShine = getSafeCheck('enableShine');
+        const glassMode = getSafeCheck('glassMode'); // Get Glass Mode State
+        const imgAlign = document.querySelector('input[name="imgAlign"]:checked') ? document.querySelector('input[name="imgAlign"]:checked').value : 'left';
+
+        const accentW = canvas.width * 0.65;
+        const accentH = canvas.height * 0.95;
+        let maskCenterX = 170 + (offAccent * 10); 
+        let maskY = 540;
+        
+        // Draw Glass Effect Overlay if enabled
+        if (glassMode && bgDrawn) {
+             ctx.save();
+             ctx.fillStyle = document.getElementById('colorBg').value; 
+             ctx.globalAlpha = 0.5; // 50% opacity
+             ctx.fillRect(0, 0, canvas.width, canvas.height);
+             ctx.restore();
+        }
+
+        if (mediaState.main.element && !getSafeCheck('disableGraphic') && isMediaReady(mediaState.main.element)) {
+            ctx.save(); 
+            
+            // Apply Glass Style Mask (Rounded Corners) if enabled
+            if (glassMode) {
+                 // Creating a rounded rectangle path for clipping
+                 ctx.beginPath();
+                 // Approximation of rounded mask logic in canvas for preview
+                 // Translate to mask center and skew
+                 ctx.translate(maskCenterX, maskY);
+                 if (skewMask) ctx.transform(1, 0, Math.tan(-11 * Math.PI / 180), 1, 0, 0);
+                 
+                 // Draw rounded rect path
+                 let x = -accentW / 2;
+                 let y = -accentH / 2;
+                 let width = accentW;
+                 let height = accentH;
+                 let radius = 45;
+                 
+                 ctx.moveTo(x + radius, y);
+                 ctx.lineTo(x + width - radius, y);
+                 ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                 ctx.lineTo(x + width, y + height - radius);
+                 ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                 ctx.lineTo(x + radius, y + height);
+                 ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                 ctx.lineTo(x, y + radius);
+                 ctx.quadraticCurveTo(x, y, x + radius, y);
+                 ctx.closePath();
+                 
+                 ctx.clip();
+                 
+                 // Reset transform for drawing image inside clip
+                 ctx.setTransform(1, 0, 0, 1, 0, 0); 
+            } else {
+                // Standard Mask Logic
+                ctx.translate(maskCenterX, maskY);
+                if (skewMask) ctx.transform(1, 0, Math.tan(-11 * Math.PI / 180), 1, 0, 0);
+                
+                ctx.beginPath();
+                ctx.rect(-accentW / 2, -accentH / 2, accentW, accentH);
+                ctx.clip(); 
+                
+                ctx.setTransform(1, 0, 0, 1, 0, 0); 
+            }
+            
+            const img = mediaState.main.element;
+            let scale = Math.max(canvas.width / img.width, canvas.height / img.height);
+            scale *= 1.15; 
+            
+            if (getSafeCheck('animMain') && !glassMode) {
+                scale *= breathScale;
+            }
+
+            let x, y;
+            if (imgAlign === 'left') {
+                var desiredCenterX = canvas.width * 0.22;
+                x = desiredCenterX - (img.width * scale / 2);
+            } else {
+                x = (canvas.width / 2) - (img.width / 2) * scale;
+            }
+            y = (canvas.height / 2) - (img.height / 2) * scale;
+            
+            // Image Opacity Entrance in Preview
+            // Fade in from 1.5s to 2.0s
+            let imgAlpha = 1.0;
+            if (!glassMode && animId) {
+                if (time < 1.5) imgAlpha = 0;
+                else if (time < 2.0) imgAlpha = (time - 1.5) / 0.5;
+                else imgAlpha = 1.0;
+            }
+            ctx.globalAlpha = imgAlpha;
+            
+            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+            
+            ctx.restore(); 
+        }
+        
+        // SHINE
+        if (!getSafeCheck('disableGraphic') && skewMask && enableShine) {
+             var shineW = parseFloat(document.getElementById('shineWidth').value) || 3;
+             var shineCol = "#FFFFFF"; // Hardcoded White
+             var shineSpd = 0; // Static
+             var shineGlow = false; // No Glow
+             var shineStatic = true; // Static
+             var shineOffset = parseFloat(document.getElementById('shineOffset').value) || 0;
+             
+             var shineCenterX = maskCenterX + shineOffset;
+             var showShine = (animId && time > 2.5) || (!animId);
+
+             if (showShine) {
+                 ctx.save();
+                 ctx.translate(shineCenterX, maskY);
+                 ctx.transform(1, 0, Math.tan(-11 * Math.PI / 180), 1, 0, 0);
+                 
+                 var lineX = accentW / 2;
+                 var lineTopY = -accentH / 2;
+                 var lineBotY = accentH / 2;
+                 
+                 ctx.beginPath();
+                 ctx.moveTo(lineX, lineTopY);
+                 ctx.lineTo(lineX, lineBotY);
+                 ctx.strokeStyle = shineCol;
+                 ctx.lineWidth = shineW;
+                 ctx.stroke();
+                 
+                 ctx.restore();
+             }
+        }
+        
+        const title1Txt = document.getElementById('title1').value;
+        const title2Txt = document.getElementById('title2').value;
+        const disclaimerTxt = document.getElementById('disclaimer').value;
+        
+        const showDiscBanner = false; // Banner removed
+        const colDiscBanner = '#333333';
+        const colDiscEdge = '#ff0000';
+
+        // Disclaimer Drawing Logic
+        if (!getSafeCheck('disableGraphic') && disclaimerTxt) {
+             ctx.save();
+             
+             // Calculate Opacity (Delay 2s, Fade 1s)
+             let discAlpha = 1;
+             if (animId) {
+                 if (time < 2.0) discAlpha = 0;
+                 else if (time < 3.0) discAlpha = (time - 2.0) / 1.0;
+                 else discAlpha = 1;
+             }
+             
+             // If Glass Mode is on, force full opacity immediately
+             if (glassMode) discAlpha = 1.0;
+
+             ctx.globalAlpha = discAlpha;
+             ctx.translate(260, 950); 
+
+             // Banner Removed Logic was here
+
+             ctx.font = "20px Arial"; 
+             ctx.fillStyle = "rgba(255,255,255,0.8)"; 
+             ctx.textAlign = "left";
+             ctx.fillText(disclaimerTxt, 0, 0); 
+             
+             ctx.restore();
+        }
+
+        // Text Drawing logic...
+        const rightAlignX = FIXED_RIGHT_ALIGN_X;
+        let cursorY = FIXED_TOP_ALIGN_Y;
+        
+        const skewT1 = getSafeCheck('skewTitle1');
+        const skewT2 = getSafeCheck('skewTitle2');
+        const skewInst = getSafeCheck('skewInst');
+        const isTitle2Disabled = getSafeCheck('disableTitle2');
+        const hideInstBanners = getSafeCheck('hideInstBanners');
+        const hideBoxTitle1 = getSafeCheck('hideBoxTitle1');
+        const hideBoxTitle2 = getSafeCheck('hideBoxTitle2');
+
+        const bulletStyle = document.getElementById('bulletStyle').value;
+        const animType = document.getElementById('animType').value;
+        const col1 = document.getElementById('color1').value;
+        const col2 = document.getElementById('color2').value;
+        const colInst = document.getElementById('colorInst').value;
+        
+        // Use global calculated durations
+        const durations = currentDurations;
+        
+        const invertList = getSafeCheck('invertColors'); 
+        const cInst = invertList ? { box: "#ffffff", text: colInst } : { box: colInst, text: "#ffffff" };
+
+        // GET DYNAMIC FONT SIZE
+        const t1Size = parseInt(document.getElementById('title1Size').value) || 135;
+
+        const t1Lines = getLines(title1Txt);
+        if (t1Lines.length > 0) {
+            let t1Trans = getAnimTransform(time, 0.5, 0.8, 'slide', rightAlignX, cursorY);
+            // Reduced padding from 70 to 40
+            const t1BoxHeight = drawSkewedBoxAndText(t1Lines, t1Size, "#ffffff", col1, rightAlignX, cursorY, 40, 5, true, skewT1, t1Trans, hideBoxTitle1, 'none');
+            cursorY += t1BoxHeight + GAP_TITLE1_TITLE2;
+        } else {
+            cursorY += (t1Size * 1.2 + 10) + GAP_TITLE1_TITLE2;
+        }
+
+        if (!isTitle2Disabled) {
+            if (title2Txt) {
+                let t2Trans = getAnimTransform(time, 0.7, 0.8, 'slide', rightAlignX, cursorY);
+                const t2BoxHeight = drawSkewedBoxAndText([title2Txt], H_TITLE2, "#ffffff", col2, rightAlignX, cursorY, 60, 5, false, skewT2, t2Trans, hideBoxTitle2, 'none');
+                cursorY += t2BoxHeight + GAP_TITLE2_INST;
+            } else {
+                cursorY += (H_TITLE2 * 1.2 + 10) + GAP_TITLE2_INST;
+            }
+        }
+        
+        const headerBottomY = cursorY; // Store bottom of titles for mask/scroll ref
+
+        // --- PRE-CALCULATE LINE HEIGHTS AND TIMINGS ---
+        let lineHeights = [];
+        let lineStartTimes = [];
+        let lineEndTimes = [];
+        
+        let tempCursorY = headerBottomY;
+        let tempStartTime = 0.9;
+        
+        for (let i = 1; i <= 8; i++) {
+            const isEnabled = getSafeCheck('enableLine' + i);
+            const txt = document.getElementById('inst' + i).value;
+            // Use pre-calculated timings
+            const myDuration = durations[i-1];
+            
+            if (isEnabled && txt) {
+                const lines = getLines(txt);
+                // Measure Height
+                const h = drawSkewedBoxAndText(lines, H_INST, cInst.text, cInst.box, rightAlignX, tempCursorY, 15, 10, false, skewInst, {x:0, y:0, scale:1, alpha:1}, false, bulletStyle, 1, true);
+                
+                lineHeights.push(h + GAP_INST_LINES);
+                lineStartTimes.push(tempStartTime);
+                lineEndTimes.push(tempStartTime + myDuration);
+                
+                tempCursorY += h + GAP_INST_LINES;
+                
+                // --- TIMING LOGIC MODIFICATION ---
+                let activeCount = 0;
+                // Count active lines up to here
+                for(let k=1; k<=i; k++) { if(getSafeCheck('enableLine'+k) && document.getElementById('inst'+k).value) activeCount++; }
+                
+                // If this was the 3rd active bullet or more, the NEXT one will start 2s later
+                if (activeCount >= 3) {
+                    tempStartTime += (myDuration + 2.0); // Duration of current + 2s Delay
+                } else {
+                    tempStartTime += myDuration;
+                }
+            } else {
+                lineHeights.push(0);
+                lineStartTimes.push(0);
+                lineEndTimes.push(0);
+            }
+        }
+
+        // --- SCROLL LOGIC ---
+        let baseScroll = 0;
+        
+        let activeIndices = [];
+        for(let i=0; i<8; i++) {
+            if (getSafeCheck('enableLine' + (i+1)) && document.getElementById('inst' + (i+1)).value) {
+                activeIndices.push(i);
+            }
+        }
+        
+        // We start scrolling when the 4th bullet (index 3) starts typing.
+        // The scroll happens DURING the typing of the new bullet.
+        // Scroll amount corresponds to the height of the top-most visible bullet that needs to leave.
+        
+        for (let k = 3; k < activeIndices.length; k++) {
+            let currentLineIdx = activeIndices[k];
+            let startTimeOfLine = lineStartTimes[currentLineIdx]; // This start time ALREADY includes the 2s delay from prev loop
+            let durationOfLine = durations[currentLineIdx];
+            
+            // We need to scroll out the line at k-3 (e.g., if k=3/4th bullet, we scroll out 1st bullet/index 0 of active)
+            let scrollOutIdx = activeIndices[k-3];
+            let heightToScroll = lineHeights[scrollOutIdx];
+            
+            if (time >= startTimeOfLine + durationOfLine) {
+                baseScroll += heightToScroll;
+            } else if (time > startTimeOfLine) {
+                let p = (time - startTimeOfLine) / durationOfLine;
+                // EaseInOut
+                let easeP = (p < 0.5) ? 2 * p * p : -1 + (4 - 2 * p) * p; 
+                baseScroll += heightToScroll * easeP;
+            }
+        }
+        
+        // --- DRAW LIST (With Mask & Scroll) ---
+        ctx.save();
+        
+        // Define Mask (Clipping Region)
+        ctx.beginPath();
+        ctx.rect(0, headerBottomY, 1920, 1080 - headerBottomY);
+        ctx.clip();
+        
+        // Apply Scroll Translation
+        // If Glass Mode is ON, disable scrolling translation (baseScroll = 0) to show static content
+        if (glassMode) {
+             ctx.translate(0, 0); 
+        } else {
+             ctx.translate(0, -baseScroll);
+        }
+
+        // Loop for 8 Lines Drawing
+        let currentDrawY = headerBottomY;
+        
+        for (let i = 1; i <= 8; i++) {
+            const isEnabled = getSafeCheck('enableLine' + i);
+            const txt = document.getElementById('inst' + i).value;
+            // Use pre-calculated timings
+            const myDuration = durations[i-1];
+            const myStart = lineStartTimes[i-1];
+            
+            if (isEnabled && txt) {
+                // Calculate type progress based on specific line timing
+                let typeProgress = 0;
+                
+                if (glassMode) {
+                      typeProgress = 1; // Full text immediately in Glass Mode
+                } else {
+                      if (time > myStart) {
+                         if (time >= myStart + myDuration) typeProgress = 1;
+                         else typeProgress = (time - myStart) / myDuration;
+                      }
+                }
+
+                // Animation Transform (Entrance)
+                let instTrans = { x: rightAlignX, y: currentDrawY, scale: 1, alpha: 1 };
+                
+                if (!glassMode) {
+                      // We use the same start time for the "slide" entrance
+                      instTrans = getAnimTransform(time, myStart, myDuration, animType, rightAlignX, currentDrawY);
+                }
+                
+                const lines = getLines(txt);
+                
+                // Draw
+                // Note: typeProgress controls the text typing. instTrans controls the box slide/scale.
+                const iBoxH = drawSkewedBoxAndText(lines, H_INST, cInst.text, cInst.box, rightAlignX, currentDrawY, 15, 10, false, skewInst, instTrans, hideInstBanners, bulletStyle, typeProgress, false);
+                
+                currentDrawY += iBoxH + GAP_INST_LINES;
+            }
+        }
+        ctx.restore(); // Restore context (removes clip and translate)
+    }
+
+    const safeStr = (str) => JSON.stringify(str); 
+
+    // --- ZIP & Script Generation ---
+    function generateAEScriptContent() {
+        const title1 = document.getElementById('title1').value || "";
+        const title2 = document.getElementById('title2').value || "";
+        
+        // Gather 8 lines values
+        const instValues = [];
+        const enValues = [];
+        for(let i=1; i<=8; i++) {
+            instValues.push(document.getElementById('inst'+i).value || "");
+            enValues.push(document.getElementById('enableLine'+i).checked);
+        }
+        
+        const disclaimer = document.getElementById('disclaimer').value || "";
+        const durIdx = document.getElementById('durationMode').value;
+        const imgAlign = document.querySelector('input[name="imgAlign"]:checked') ? document.querySelector('input[name="imgAlign"]:checked').value : 'left';
+        const mediaFolderPath = document.getElementById('mediaFolderPath').value || "";
+        const mediaMainFileName = document.getElementById('mediaMainFileName').value || "";
+        const mediaBgFileName = document.getElementById('mediaBgFileName').value || "";
+        
+        // Track audio
+        const hasAudio = (document.getElementById('audioFileInput').files.length > 0 || globalAudioURL !== null);
+
+        const colBg = document.getElementById('colorBg').value;
+        const col1 = document.getElementById('color1').value;
+        const col2 = document.getElementById('color2').value;
+        const colInst = document.getElementById('colorInst').value;
+        const colShape = "#F5A623";
+        
+        // Fixed Shine values for AE Script
+        const colShine = "#FFFFFF";
+        const shineW = document.getElementById('shineWidth').value;
+        const shineSpd = "0"; // Static
+        const shineGlow = false;
+        const shineStatic = true;
+        
+        let shineOffset = document.getElementById('shineOffset').value; 
+        if (shineOffset == "0") shineOffset = "-70";
+
+        const showDiscBanner = false; 
+        const colDiscBanner = '#333333';
+        const colDiscEdge = '#ff0000';
+
+        const skewT1 = document.getElementById('skewTitle1').checked;
+        const skewT2 = document.getElementById('skewTitle2').checked;
+        const skewInst = document.getElementById('skewInst').checked;
+        const skewMask = document.getElementById('skewMask').checked;
+        const enableShine = document.getElementById('enableShine') ? document.getElementById('enableShine').checked : false; 
+        const disableGraphic = document.getElementById('disableGraphic').checked;
+        const invertColors = document.getElementById('invertColors').checked;
+        const disableTitle2 = document.getElementById('disableTitle2').checked;
+        const hideInstBanners = document.getElementById('hideInstBanners').checked;
+        const hideBoxTitle1 = document.getElementById('hideBoxTitle1').checked;
+        const hideBoxTitle2 = document.getElementById('hideBoxTitle2').checked;
+        const glassMode = document.getElementById('glassMode').checked; // Get Glass Mode for Script
+        
+        const animMain = document.getElementById('animMain') ? document.getElementById('animMain').checked : true;
+        const animBG = false; // Disabled by default in AE as requested
+        
+        // Get Title Size
+        const t1Size = parseInt(document.getElementById('title1Size').value) || 135;
+
+        // Use global calculated durations to support Audio Duration mode logic
+        updateDurations();
+        const durations = currentDurations;
+        
+        // Correct Comp Duration Calculation
+        let totalSeqTime = 0.9;
+        let activeCount = 0;
+        for(let i=0; i<8; i++) {
+            if (enValues[i]) {
+                activeCount++;
+                if (activeCount > 3) totalSeqTime += 2.0; // Delay
+                totalSeqTime += durations[i];
+            }
+        }
+        
+        let audioDur = Math.ceil(totalSeqTime + 2);
+        
+        // Use globalAudioDuration if mode is 0 and audio exists, otherwise fallback to calculated logic
+        let calcDur = audioDur; // Default
+        
+        if (durIdx == 1) calcDur = 30;
+        else if (durIdx == 2) calcDur = 45;
+        else if (durIdx == 3) calcDur = 90;
+        else if (durIdx == 0 && globalAudioDuration > 0) calcDur = Math.ceil(globalAudioDuration);
+
+        const bulletStyle = document.getElementById('bulletStyle').value;
+        const animType = document.getElementById('animType').value;
+
+        // Note: safeStr handles JSON escaping for multiline
+        let finalTitle1 = title1; // .replace(/\n/g, "\r") handled by JSON.stringify usually, but let's trust safeStr
+        let finalInst = instValues; // Array
+
+        return `// Auto Graphics Tool v60 (8 Lines) - Direct Execution Mode
+// Generated by Web App
+
+(function() {
+    var appID = "v_60 BULLETS CLEAN";
+    
+    // --- Helper Functions ---
+    function hexToRgb(hex) {
+        var cleanHex = hex.replace('#', '');
+        if (cleanHex.length !== 6) return [1.0, 0.0, 0.5];
+        var r = parseInt(cleanHex.substring(0, 2), 16) / 255;
+        var g = parseInt(cleanHex.substring(2, 4), 16) / 255;
+        var b = parseInt(cleanHex.substring(4, 6), 16) / 255;
+        return [r, g, b];
+    }
+    
+    function addBreathingAnimation(layer) {
+        var exp = "var speed = 0.5; var amount = 3; var w = (1 - Math.cos(time*speed)) * amount; value + [w,w];";
+        layer.property("Scale").expression = exp;
+    }
+    
+    function importMediaFromDialog(targetCompName, alignMode, folderPath, fileName) {
+        var targetComp = getOrCreatePreComp(app.project, targetCompName, 1920, 1080, [0.5,0.5,0.5], 30);
+        if (!targetComp) return null;
+        
+        var importedItem = null;
+        
+        // Try automatic import if folderPath and fileName exist
+        if (folderPath && fileName) {
+            var f = new File(folderPath + "/" + fileName);
+            if (f.exists) {
+                try {
+                    var importOptions = new ImportOptions(f);
+                    importedItem = app.project.importFile(importOptions);
+                } catch(e) { }
+            }
+        }
+        
+        // Fallback to Dialog
+        if (!importedItem) {
+            var file = File.openDialog("Select Media for " + targetCompName);
+            if (file) {
+                try {
+                    var importOptions = new ImportOptions(file);
+                    importedItem = app.project.importFile(importOptions);
+                } catch(e) { alert("Import Failed: " + e.toString()); } 
+            }
+        }
+        
+        if (importedItem) {
+            while(targetComp.numLayers > 0) { targetComp.layer(1).remove(); }
+            var layer = targetComp.layers.add(importedItem);
+            alignLayerInComp(targetComp, layer, alignMode);
+        }
+    }
+    
+    function alignLayerInComp(comp, layer, alignMode) {
+        if (!layer) return;
+        var compW = comp.width; var compH = comp.height;
+        var s = Math.max(compW / layer.width, compH / layer.height) * 100;
+        s = s * 1.15; 
+        var finalX = compW/2; var finalY = compH/2;
+        if (alignMode === 'left') {
+            var desiredCenterX = compW * 0.22; 
+            layer.scale.setValue([s, s]);
+            finalX = desiredCenterX;
+            layer.position.setValue([finalX, finalY]);
+        } else {
+            layer.scale.setValue([s, s]);
+            layer.position.setValue([finalX, finalY]);
+        }
+    }
+    
+    function updateMediaTransforms(targetCompName, alignMode) {
+        var targetComp = null;
+        for (var i = 1; i <= app.project.numItems; i++) {
+            if (app.project.item(i) instanceof CompItem && app.project.item(i).name === targetCompName) {
+                targetComp = app.project.item(i);
+                break;
+            }
+        }
+        if (targetComp && targetComp.numLayers > 0) {
+            var layer = targetComp.layer(1);
+            alignLayerInComp(targetComp, layer, alignMode);
+        }
+    }
+    
+    function importAudioFromDialog(targetCompName) {
+        var targetComp = getOrCreatePreComp(app.project, targetCompName, 1920, 1080, [0.5,0.5,0.5], 30);
+        if (!targetComp) return null;
+        var file = File.openDialog("Select Audio File (WAV/MP3)");
+        if (file) {
+            try {
+                var importOptions = new ImportOptions(file);
+                var importedItem = app.project.importFile(importOptions);
+                while(targetComp.numLayers > 0) { targetComp.layer(1).remove(); }
+                var layer = targetComp.layers.add(importedItem);
+                return layer;
+            } catch(e) { alert("Audio Import Failed: " + e.toString()); }
+        }
+        return null;
+    }
+    
+    function getAudioLayer(targetCompName) {
+        var targetComp = null;
+        for (var i = 1; i <= app.project.numItems; i++) {
+            if (app.project.item(i) instanceof CompItem && app.project.item(i).name === targetCompName) {
+                targetComp = app.project.item(i);
+                break;
+            }
+        }
+        if (targetComp && targetComp.numLayers > 0) return targetComp.layer(1);
+        return null;
+    }
+
+    function updateItemDuration(itemName, newDuration) {
+        for (var i = 1; i <= app.project.numItems; i++) {
+            var item = app.project.item(i);
+            if (item instanceof CompItem && item.name === itemName) {
+                if (item.duration < newDuration) item.duration = newDuration;
+                for (var j = 1; j <= item.numLayers; j++) {
+                    var layer = item.layer(j);
+                    var isVideo = false;
+                    if (layer.source && layer.source.duration > 0) {
+                        isVideo = true;
+                    }
+                    if (isVideo) {
+                         if (layer.canSetTimeRemapEnabled && !layer.timeRemapEnabled) {
+                             layer.timeRemapEnabled = true;
+                             if (layer.property("Time Remap").canSetExpression) {
+                                layer.property("Time Remap").expression = "loopOut('cycle');";
+                             }
+                          }
+                    }
+                    if (layer.outPoint < newDuration) {
+                        layer.outPoint = newDuration;
+                    }
+                }
+            }
+        }
+    }
+
+    function createHDComp(name, duration, frameRate) {
+        var comp = null;
+        for (var i = 1; i <= app.project.numItems; i++) {
+            if (app.project.item(i) instanceof CompItem && app.project.item(i).name === name) {
+                comp = app.project.item(i);
+                break;
+            }
+        }
+        if (!comp) {
+            comp = app.project.items.addComp(name, 1920, 1080, 1.0, duration, frameRate);
+            comp.openInViewer(); 
+        } else {
+            if (comp.duration < duration) comp.duration = duration;
+        }
+        return comp;
+    }
+    
+    function findLayer(comp, name) {
+        for (var i = 1; i <= comp.numLayers; i++) {
+            if (comp.layer(i).name === name) return comp.layer(i);
+        }
+        return null;
+    }
+
+    function updateLayerPosition(layer, newPos) {
+        var prop = layer.property("Position");
+        while (prop.numKeys > 0) prop.removeKey(1);
+        prop.setValue(newPos);
+    }
+    
+    function createSolidBackground(comp, color, forcedDuration) {
+        var bgCompName = "BG IMAGE HERE";
+        var bgComp = null;
+         for (var i = 1; i <= app.project.numItems; i++) {
+            if (app.project.item(i) instanceof CompItem && app.project.item(i).name === bgCompName) {
+                bgComp = app.project.item(i);
+                break;
+            }
+        }
+        if (!bgComp) {
+            bgComp = app.project.items.addComp(bgCompName, 1920, 1080, 1.0, forcedDuration, 24);
+        } else {
+            if(bgComp.duration < forcedDuration) bgComp.duration = forcedDuration;
+        }
+        
+        if (bgComp.numLayers === 0) {
+             bgComp.layers.addSolid(color, "Solid BG", 1920, 1080, 1.0, forcedDuration);
+        } else {
+             var l = bgComp.layer(bgComp.numLayers); 
+             if (l.source instanceof SolidSource) { l.source.mainSource.color = color; }
+             for(var j=1; j<=bgComp.numLayers; j++) { bgComp.layer(j).outPoint = bgComp.duration; }
+        }
+
+        var layer = findLayer(comp, bgCompName);
+        if (!layer) {
+             layer = comp.layers.add(bgComp);
+             layer.name = bgCompName;
+             layer.moveToEnd();
+        } else {
+             layer.moveToEnd();
+        }
+        return layer;
+    }
+
+    function getOrCreatePreComp(project, name, width, height, placeholderColor, duration) {
+        var preComp = null;
+        for (var i = 1; i <= project.numItems; i++) {
+            if (project.item(i) instanceof CompItem && project.item(i).name === name) {
+                preComp = project.item(i);
+                break;
+            }
+        }
+        if (!preComp) {
+            preComp = project.items.addComp(name, width, height, 1.0, duration, 24);
+            preComp.layers.addSolid(placeholderColor, "Placeholder Solid", width, height, 1.0, duration);
+        } else {
+            if (preComp.duration < duration) preComp.duration = duration;
+        }
+        return preComp;
+    }
+
+    function updateOrCreateImageLayer(comp, name, pos, forcedDuration) {
+        var layer = findLayer(comp, name);
+        if (!layer) {
+            var imgComp = getOrCreatePreComp(app.project, name, 1920, 1080, [0.5, 0.5, 0.5], forcedDuration);
+            layer = comp.layers.add(imgComp);
+            layer.name = name;
+            layer.property("Position").setValue(pos);
+        } else {
+            updateLayerPosition(layer, pos);
+        }
+        return layer;
+    }
+
+    function addDisclaimerToPreComp(comp, text, forcedDuration, showBanner, bannerColor, edgeColor, isGlass) {
+        var layerName = "Disclaimer Main";
+        var layer = findLayer(comp, layerName);
+        if (!layer) {
+            layer = comp.layers.addText(text);
+            layer.name = layerName;
+        }
+        var textProp = layer.property("Source Text");
+        var textDocument = textProp.value;
+        textDocument.text = text;
+        textDocument.fontSize = 24;
+        textDocument.fillColor = [1,1,1];
+        textDocument.font = "Arial-BoldMT";
+        textProp.setValue(textDocument);
+        
+        var posX = 260; var posY = 950;
+        layer.property("Position").setValue([posX, posY]);
+        
+        var op = layer.property("Opacity");
+        while(op.numKeys > 0) op.removeKey(1);
+        
+        if (isGlass) {
+            op.setValue(100);
+        } else {
+            op.setValueAtTime(0, 0);
+            op.setValueAtTime(2, 0);
+            op.setValueAtTime(3, 100);
+        }
+        
+        var bannerName = "Disclaimer Banner";
+        var bLayer = findLayer(comp, bannerName);
+        if (bLayer) bLayer.remove();
+        
+        return layer;
+    }
+
+    function updateOrCreateAccent(comp, name, color, pos, enableSkew, forcedDuration) {
+        var layer = findLayer(comp, name);
+        if (!layer) {
+            var sourceComp = getOrCreatePreComp(app.project, name, 1400, 1200, color, forcedDuration);
+            layer = comp.layers.add(sourceComp);
+            layer.name = name;
+            layer.property("Effects").addProperty("ADBE Geometry2"); 
+            layer.property("Position").setValue(pos);
+            layer.property("Rotation").setValue(90);
+        } else {
+            updateLayerPosition(layer, pos);
+            layer.property("Rotation").setValue(90);
+        }
+        
+        addEntranceAnimation(layer, 0.3, "slide", 2.5, 1500);
+        
+        var foundSource = null;
+        for (var i = 1; i <= app.project.numItems; i++) {
+            if (app.project.item(i) instanceof CompItem && app.project.item(i).name === name) {
+                foundSource = app.project.item(i);
+                break;
+            }
+        }
+        if(foundSource) {
+             if(foundSource.duration < forcedDuration) foundSource.duration = forcedDuration;
+             for(var z=1; z<=foundSource.numLayers; z++) { foundSource.layer(z).outPoint = forcedDuration; }
+        }
+
+        var effect = layer.property("Effects").property("ADBE Geometry2");
+        if (effect) {
+            var skewVal = enableSkew ? 11 : 0;
+            effect.property("Skew").setValue(skewVal);
+            effect.property("Skew Axis").setValue(0);
+        }
+        return layer;
+    }
+    
+    function createShineLayer(comp, accentH, enableSkew, col, wid, spd, glow, isStatic, offset, isGlass) {
+        var name = "Shine Line";
+        var layer = findLayer(comp, name);
+        if (layer) layer.remove(); 
+        
+        layer = comp.layers.addShape();
+        layer.name = name;
+        
+        var shapeGroup = layer.property("Contents").addProperty("ADBE Vector Group");
+        var pathGroup = shapeGroup.property("Contents").addProperty("ADBE Vector Shape - Group");
+        var myPath = pathGroup.property("Path").value;
+        
+        var extendedH = 1500; 
+        myPath.vertices = [[0, -extendedH/2], [0, extendedH/2]];
+        myPath.closed = false;
+        pathGroup.property("Path").setValue(myPath);
+        
+        var stroke = shapeGroup.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
+        stroke.property("Color").setValue(col);
+        stroke.property("Stroke Width").setValue(wid);
+        
+        var finalX = 870 + parseFloat(offset);
+        layer.property("Position").setValue([finalX, 540]);
+        
+        if (enableSkew) {
+            layer.property("Rotation").setValue(11);
+        } else {
+            layer.property("Rotation").setValue(0);
+        }
+
+        if (isGlass) {
+            layer.inPoint = 0;
+        } else {
+            layer.inPoint = 2.5;
+        } 
+
+        if (!isStatic) {
+            var trim = shapeGroup.property("Contents").addProperty("ADBE Vector Filter - Trim");
+            trim.property("Start").setValue(0);
+            trim.property("End").setValue(30); 
+            var offsetProp = trim.property("Offset");
+            offsetProp.setValueAtTime(0, 0);
+            offsetProp.setValueAtTime(spd, 360); 
+            offsetProp.expression = "loopOut('continue')";
+        }
+
+        if (glow) {
+             var glo = layer.property("Effects").addProperty("ADBE Glo2");
+             if(glo) {
+                 glo.property("Glow Threshold").setValue(60);
+                 glo.property("Glow Radius").setValue(30);
+                 glo.property("Glow Intensity").setValue(1.5);
+             }
+        }
+        
+        return layer;
+    }
+    
+    function setTrackMatteSafe(fillLayer, matteLayer) {
+        try {
+            if (typeof fillLayer.setTrackMatte === "function") {
+                fillLayer.setTrackMatte(matteLayer, TrackMatteType.ALPHA);
+            } else {
+                fillLayer.trackMatteType = TrackMatteType.ALPHA;
+            }
+            matteLayer.enabled = false; 
+        } catch(e) {}
+    }
+
+    function updateOrCreateText(comp, name, textContent, color, size, font) {
+        var layer = findLayer(comp, name);
+        if (!layer) {
+            layer = comp.layers.addText(textContent);
+            layer.name = name;
+        }
+        var textProp = layer.property("Source Text");
+        var textDocument = textProp.value;
+        textDocument.text = textContent;
+        textDocument.fillColor = color;
+        textDocument.fontSize = size;
+        textDocument.justification = ParagraphJustification.RIGHT_JUSTIFY;
+        try { if (typeof ParagraphDirection !== 'undefined') textDocument.direction = ParagraphDirection.RIGHT_TO_LEFT_DIRECTION; } catch (e) {}
+        textDocument.font = font || "Arial-BoldMT";
+        textDocument.leading = size * 1.2;
+        textProp.setValue(textDocument);
+        return layer;
+    }
+
+    function updateOrCreateTrapezoid(comp, name, color, xRight, yTop, width, height, enableSkew) {
+        var layer = findLayer(comp, name);
+        var isNew = false;
+        if (!layer) {
+            layer = comp.layers.addShape();
+            layer.name = name;
+            isNew = true;
+            var shapeGroup = layer.property("Contents").addProperty("ADBE Vector Group");
+            shapeGroup.property("Contents").addProperty("ADBE Vector Shape - Group");
+            shapeGroup.property("Contents").addProperty("ADBE Vector Graphic - Fill");
+        }
+        var shapeGroup = layer.property("Contents").property(1);
+        var myPath = shapeGroup.property("Contents").property(1);
+        var myPathProperty = myPath.property("Path");
+        var myShape = myPathProperty.value;
+        var skewAmt = enableSkew ? Math.tan(11 * Math.PI / 180) * height : 0;
+        var vTR = [0, 0]; var vBR = [0, height];
+        var vBL = [-width - skewAmt, height]; var vTL = [-width, 0];
+        myShape.vertices = [vTR, vBR, vBL, vTL];
+        myShape.closed = true;
+        myPathProperty.setValue(myShape);
+        var myFill = shapeGroup.property("Contents").property(2);
+        myFill.property("Color").setValue(color);
+        updateLayerPosition(layer, [xRight, yTop]);
+        return {layer: layer, isNew: isNew};
+    }
+    
+    function addBulletShape(comp, name, type, x, y, size, color) {
+        if (type === 'none') return;
+        var layer = findLayer(comp, name);
+        if (!layer) {
+            layer = comp.layers.addShape();
+            layer.name = name;
+            var sg = layer.property("Contents").addProperty("ADBE Vector Group");
+            sg.property("Contents").addProperty("ADBE Vector Shape - Group"); 
+            sg.property("Contents").addProperty("ADBE Vector Graphic - Fill");
+        }
+        var shapeGroup = layer.property("Contents").property(1);
+        var myPath = shapeGroup.property("Contents").property(1);
+        var myPathProp = myPath.property("Path");
+        var myShape = myPathProp.value;
+        if (type === 'square') {
+            var s = size / 2;
+            myShape.vertices = [[-s, -s], [s, -s], [s, s], [-s, s]];
+            myShape.closed = true;
+        } else if (type === 'circle') {
+             var r = size / 2;
+             var k = 0.5522847498 * r;
+             myShape.vertices = [[0, -r], [r, 0], [0, r], [-r, 0]];
+             myShape.inTangents = [[-k, 0], [0, -k], [k, 0], [0, k]];
+             myShape.outTangents = [[k, 0], [0, k], [-k, 0], [0, -k]];
+             myShape.closed = true;
+        }
+        myPathProp.setValue(myShape);
+        var myFill = shapeGroup.property("Contents").property(2);
+        myFill.property("Color").setValue(color);
+        updateLayerPosition(layer, [x, y]);
+        return layer;
+    }
+
+    function addEntranceAnimation(layer, delay, type, duration, distance) {
+        var pos = layer.property("Position");
+        var scale = layer.property("Scale");
+        var opacity = layer.property("Opacity");
+        while (pos.numKeys > 0) pos.removeKey(1);
+        while (scale.numKeys > 0) scale.removeKey(1);
+        while (opacity.numKeys > 0) opacity.removeKey(1);
+        opacity.setValue(100); scale.setValue([100,100]);
+        var animDuration = duration || 0.8;
+        var kf1Time = delay, kf2Time = delay + animDuration;
+        var easeOut = new KeyframeEase(0.6, 75);
+        var easeIn = new KeyframeEase(0.6, 75);
+
+        if (type === 'scale') {
+             scale.setValueAtTime(kf1Time, [0, 0]);
+             scale.setValueAtTime(kf2Time, [100, 100]);
+             scale.setTemporalEaseAtKey(1, [easeOut, easeOut, easeOut]); 
+             scale.setTemporalEaseAtKey(2, [easeIn, easeIn, easeIn]);
+        } else if (type === 'fade') {
+             opacity.setValueAtTime(kf1Time, 0);
+             opacity.setValueAtTime(kf2Time, 100);
+             opacity.setTemporalEaseAtKey(1, [easeOut]);
+             opacity.setTemporalEaseAtKey(2, [easeIn]);
+        } else {
+             var dist = distance || 150;
+             var currentPos = pos.value;
+             var startPos = [currentPos[0] + dist, currentPos[1]];
+             pos.setValueAtTime(kf1Time, startPos);
+             pos.setValueAtTime(kf2Time, currentPos);
+             opacity.setValueAtTime(kf1Time, 0);
+             opacity.setValueAtTime(kf2Time, 100);
+             pos.setTemporalEaseAtKey(1, [easeOut]);
+             pos.setTemporalEaseAtKey(2, [easeIn]);
+        }
+    }
+
+    function addTypewriterEffect(layer, delay, duration) {
+        var animators = layer.property("Text").property("Animators");
+        var existing = animators.property("Typewriter");
+        if (existing) existing.remove();
+        var animator = animators.addProperty("ADBE Text Animator");
+        animator.name = "Typewriter";
+        var opacityProp = animator.property("ADBE Text Animator Properties").addProperty("ADBE Text Opacity");
+        opacityProp.setValue(0);
+        var selector = animator.property("ADBE Text Selectors").addProperty("ADBE Text Selector"); 
+        var startProp = selector.property("Start");
+        startProp.setValueAtTime(delay, 0);
+        startProp.setValueAtTime(delay + duration, 100);
+    }
+
+    // --- NEW HELPER FOR GLASS WALL MODE (ROUNDED MASK) ---
+    function applyGlassMaskToComp(compName) {
+        var comp = null;
+        for (var i = 1; i <= app.project.numItems; i++) {
+            if (app.project.item(i) instanceof CompItem && app.project.item(i).name === compName) {
+                comp = app.project.item(i);
+                break;
+            }
+        }
+        if (!comp) return;
+
+        // Remove existing mask if any
+        var existingMask = findLayer(comp, "Glass Mask");
+        if(existingMask) existingMask.remove();
+
+        var layer = comp.layers.addShape();
+        layer.name = "Glass Mask";
+        var sg = layer.property("Contents").addProperty("ADBE Vector Group");
+        var sp = sg.property("Contents").addProperty("ADBE Vector Shape - Rect");
+        sp.property("Size").setValue([1920, 1080]);
+        sp.property("Roundness").setValue(45); // 45px Rounded Corners
+        var sf = sg.property("Contents").addProperty("ADBE Vector Graphic - Fill");
+        sf.property("Color").setValue([1,1,1]);
+        
+        layer.moveToBeginning(); // Move to top (Layer 1)
+
+        // Set Track Matte for all subsequent layers
+        for(var i=2; i<=comp.numLayers; i++) {
+            setTrackMatteSafe(comp.layer(i), layer);
+        }
+    }
+    
+    function createGraphics(comp, uiControls, forcedDuration) {
+        if (!comp) return;
+        
+        updateItemDuration("BG IMAGE HERE", forcedDuration);
+        updateItemDuration("Accent Source", forcedDuration);
+        updateItemDuration("PLACE IMAGE HERE", forcedDuration);
+        updateItemDuration("PUT AUDIO HERE", forcedDuration);
+
+        var invert = uiControls.invertColors; var disableT2 = uiControls.disableTitle2; var hideBanners = uiControls.hideInstBanners;
+        var whiteCol = [1, 1, 1];
+        function resolveListColors(inputHex) { var mainCol = hexToRgb(inputHex); if (invert) return { box: whiteCol, text: mainCol }; return { box: mainCol, text: whiteCol }; }
+
+        var colorBg = hexToRgb(uiControls.colorBg); var color1 = hexToRgb(uiControls.color1); var color2 = hexToRgb(uiControls.color2);
+        var colorShape = hexToRgb(uiControls.colorShape); 
+        var colorShine = hexToRgb(uiControls.colorShine);
+        var colorDiscBanner = hexToRgb(uiControls.colorDiscBanner);
+        var colorDiscEdge = hexToRgb(uiControls.colorDiscEdge);
+    
+        var bulletStyle = uiControls.bulletStyle; var animType = uiControls.animType;
+        
+        var bgLayer = createSolidBackground(comp, colorBg, forcedDuration);
+        
+        // --- GLASS WALL MODE LOGIC ---
+        var isGlass = uiControls.glassMode;
+        if (isGlass) {
+             // 1. Lower BG opacity in Main Comp
+             if(bgLayer) bgLayer.opacity.setValue(50);
+             // 2. Set Work Area to Frame 0 for PNG Export
+             comp.workAreaStart = 0;
+             comp.workAreaDuration = comp.frameDuration; // 1 frame
+        } else {
+             if (uiControls.animBG) addBreathingAnimation(bgLayer);
+        }
+
+        var audioComp = getOrCreatePreComp(app.project, "PUT AUDIO HERE", 1920, 1080, [0.3, 0, 0.3], forcedDuration);
+        var audioLayer = findLayer(comp, "PUT AUDIO HERE");
+        if (!audioLayer) {
+            audioLayer = comp.layers.add(audioComp);
+            audioLayer.name = "PUT AUDIO HERE";
+            audioLayer.moveToEnd(); 
+            audioLayer.audioEnabled = true;
+        } else {
+            audioLayer.moveToEnd();
+        }
+        
+        var innerAudioLayer = getAudioLayer("PUT AUDIO HERE");
+        
+        if (!uiControls.disableGraphic) {
+             updateMediaTransforms("PLACE IMAGE HERE", "${imgAlign}");
+        }
+
+        if (!uiControls.disableGraphic) {
+            var imgLayer = updateOrCreateImageLayer(comp, "PLACE IMAGE HERE", [comp.width/2, comp.height/2], forcedDuration); imgLayer.enabled = true; imgLayer.moveBefore(bgLayer); 
+            if (uiControls.animMain && !isGlass) addBreathingAnimation(imgLayer); // Disable breath in Glass
+            
+            // --- Opacity Fade-in Logic for Image (1.5s -> 2.0s) ---
+            // Only if NOT glass mode (Glass is static preview)
+            if(!isGlass) {
+                var op = imgLayer.property("Opacity");
+                while(op.numKeys > 0) op.removeKey(1);
+                op.setValueAtTime(0, 0);
+                op.setValueAtTime(1.5, 0);
+                op.setValueAtTime(2.0, 100);
+            } else {
+                // Ensure visible immediately in Glass Mode
+                var op = imgLayer.property("Opacity");
+                while(op.numKeys > 0) op.removeKey(1);
+                op.setValue(100);
+            }
+
+            addDisclaimerToPreComp(comp, uiControls.disclaimer, forcedDuration, uiControls.showDiscBanner, colorDiscBanner, colorDiscEdge, isGlass);
+            var dl = findLayer(comp, "Disclaimer Main");
+            if(dl) dl.moveBefore(imgLayer);
+
+            var accentLayer = updateOrCreateAccent(comp, "Accent Source", colorShape, [200, 540], uiControls.skewMask, forcedDuration);
+            accentLayer.enabled = true; accentLayer.moveBefore(imgLayer); setTrackMatteSafe(imgLayer, accentLayer);
+            
+            // Handle Accent/Mask Entrance Animation (Disable in Glass Mode)
+            if (isGlass) {
+                 // Remove keys if existing or just set static
+                 var p = accentLayer.property("Position");
+                 var s = accentLayer.property("Scale");
+                 var o = accentLayer.property("Opacity");
+                 // Remove all keys
+                 while(p.numKeys > 0) p.removeKey(1);
+                 while(s.numKeys > 0) s.removeKey(1);
+                 while(o.numKeys > 0) o.removeKey(1);
+                 // Ensure visibility and final pos
+                 o.setValue(100); s.setValue([100,100]);
+                 // Position is already set by updateOrCreateAccent
+            } else {
+                 // Normal animation is handled inside updateOrCreateAccent (default 0.3s slide)
+            }
+            
+            if (uiControls.skewMask && uiControls.enableShine) {
+                var sw = parseFloat(uiControls.shineWidth) || 4;
+                var sp = parseFloat(uiControls.shineSpeed) || 3.0;
+                var off = parseFloat(uiControls.shineOffset) || 0;
+                // Force static if Glass Mode
+                var sStatic = isGlass ? true : uiControls.shineStatic;
+                createShineLayer(comp, 1080, true, colorShine, sw, sp, uiControls.shineGlow, sStatic, off, isGlass);
+            } else {
+                var sL = findLayer(comp, "Shine Line"); if(sL) sL.remove();
+            }
+        } else {
+            var imgL = findLayer(comp, "PLACE IMAGE HERE"); if (imgL) imgL.enabled = false;
+            var accL = findLayer(comp, "Accent Source"); if (accL) accL.enabled = false;
+            var shineL = findLayer(comp, "Shine Line"); if(shineL) shineL.enabled = false;
+            var discL = findLayer(comp, "Disclaimer Main"); if(discL) discL.enabled = false;
+        }
+        
+        var rightAlignX = 1800; var cursorY = 200; var GAP_TITLE1_TITLE2 = 30; var GAP_TITLE2_INST = 80; var GAP_INST_LINES = 20;
+        
+        // --- Create List Comp ---
+        var listCompName = "List Composition";
+        var listComp = getOrCreatePreComp(app.project, listCompName, 1920, 2000, [0,0,0], forcedDuration); 
+        while(listComp.numLayers > 0) { listComp.layer(1).remove(); }
+        var listLayer = comp.layers.add(listComp);
+        listLayer.name = "List Layer";
+        listLayer.property("Position").setValue([960, 1000]); 
+        
+        // --- Titles ---
+        var t1 = updateOrCreateText(comp, "Title 1 Text", uiControls.title1 || " ", whiteCol, ${t1Size}, "Arial-BoldMT"); 
+        var t1Rect = t1.sourceRectAtTime(0, false); updateLayerPosition(t1, [rightAlignX - 10, cursorY + 5 - t1Rect.top]);
+        if (t1.property("Position").numKeys === 0 && !isGlass) addEntranceAnimation(t1, 0.5, "slide", 0.8);
+        // If Glass Mode, ensure no keys
+        if (isGlass) { while(t1.property("Position").numKeys > 0) t1.property("Position").removeKey(1); while(t1.property("Opacity").numKeys > 0) t1.property("Opacity").removeKey(1); t1.property("Opacity").setValue(100); }
+
+        // Reduced padding from 70 to 40
+        var boxW = t1Rect.width + 40; var boxH = t1Rect.height + 10;        
+        var b1Obj = updateOrCreateTrapezoid(comp, "Box 1", color1, rightAlignX, cursorY, boxW, boxH, uiControls.skewT1); b1Obj.layer.moveAfter(t1); 
+        if (b1Obj.isNew && !isGlass) addEntranceAnimation(b1Obj.layer, 0.5, "slide", 0.8);
+        if (isGlass) { while(b1Obj.layer.property("Position").numKeys > 0) b1Obj.layer.property("Position").removeKey(1); while(b1Obj.layer.property("Opacity").numKeys > 0) b1Obj.layer.property("Opacity").removeKey(1); b1Obj.layer.property("Opacity").setValue(100); }
+        
+        if (uiControls.hideBoxTitle1) b1Obj.layer.enabled = false;
+        else b1Obj.layer.enabled = true;
+
+        cursorY += boxH + GAP_TITLE1_TITLE2;
+
+        if (!disableT2) {
+            var t2 = updateOrCreateText(comp, "Title 2 Text", uiControls.title2 || " ", whiteCol, 100, "ArialMT"); t2.enabled = true;
+            var t2Rect = t2.sourceRectAtTime(0, false); updateLayerPosition(t2, [rightAlignX - 10, cursorY + 5 - t2Rect.top]);
+            if (t2.property("Position").numKeys === 0 && !isGlass) addEntranceAnimation(t2, 0.7, "slide", 0.8);
+            if (isGlass) { while(t2.property("Position").numKeys > 0) t2.property("Position").removeKey(1); while(t2.property("Opacity").numKeys > 0) t2.property("Opacity").removeKey(1); t2.property("Opacity").setValue(100); }
+            
+            var boxW2 = t2Rect.width + 120; var boxH2 = t2Rect.height + 10;
+            var b2Obj = updateOrCreateTrapezoid(comp, "Box 2", color2, rightAlignX, cursorY, boxW2, boxH2, uiControls.skewT2); b2Obj.layer.enabled = true; b2Obj.layer.moveAfter(t2);
+            if (b2Obj.isNew && !isGlass) addEntranceAnimation(b2Obj.layer, 0.7, "slide", 0.8);
+            if (isGlass) { while(b2Obj.layer.property("Position").numKeys > 0) b2Obj.layer.property("Position").removeKey(1); while(b2Obj.layer.property("Opacity").numKeys > 0) b2Obj.layer.property("Opacity").removeKey(1); b2Obj.layer.property("Opacity").setValue(100); }
+            
+            if (uiControls.hideBoxTitle2) b2Obj.layer.enabled = false;
+            else b2Obj.layer.enabled = true;
+
+            cursorY += boxH2 + GAP_TITLE2_INST;
+        } else { var uT2 = findLayer(comp, "Title 2 Text"); if(uT2) uT2.enabled=false; var uB2=findLayer(comp, "Box 2"); if(uB2) uB2.enabled=false; }
+
+        // --- Setup List Mask ---
+        var maskShape = new Shape();
+        maskShape.vertices = [[0, cursorY], [1920, cursorY], [1920, 1080], [0, 1080]];
+        maskShape.closed = true;
+        var myMask = listLayer.Masks.addProperty("ADBE Mask Atom");
+        myMask.maskShape.setValue(maskShape);
+        
+        // --- Setup List Content ---
+        var instructions = uiControls.instValues;
+        var enables = uiControls.enValues;
+        var cInst = resolveListColors(uiControls.colorInst);
+        var currentStartTime = 0.9;
+        
+        var durations = uiControls.durations;
+
+        var markerLayer = innerAudioLayer; 
+        if (!markerLayer && audioComp.numLayers > 0) markerLayer = audioComp.layer(1); 
+        if (!markerLayer) {
+             markerLayer = audioComp.layers.addNull();
+             markerLayer.name = "Marker Placeholder";
+        }
+
+        var markerProp = markerLayer.property("Marker");
+        if (markerProp) {
+             while (markerProp.numKeys > 0) markerProp.removeKey(1);
+        }
+
+        var activeCount = 0;
+        var scrollNull = listComp.layers.addNull();
+        scrollNull.name = "Scroll Control";
+        scrollNull.position.setValue([960, 540]); 
+        
+        var lineHeights = [];
+        var lineStartTimes = [];
+        var activeIndices = [];
+        var listCursorY = cursorY; 
+
+        for (var i = 0; i < 8; i++) {
+            var layerName = "Inst Text " + i; var boxName = "Box Inst " + i; var bulletName = "Bullet Geo " + i;
+            var isEnabled = enables[i]; var myDuration = durations[i];
+            if (isEnabled && instructions[i]) {
+                activeCount++;
+                if (activeCount > 3) currentStartTime += 2.0; 
+                
+                var txt = instructions[i];
+                var ti = updateOrCreateText(listComp, layerName, txt, cInst.text, 65, "ArialMT"); ti.enabled = true; 
+                var tiRect = ti.sourceRectAtTime(0, false);
+                
+                var mv = new MarkerValue("Audio " + (i+1)); 
+                mv.duration = myDuration; 
+                markerProp.setValueAtTime(currentStartTime, mv);
+
+                var stagger = currentStartTime; var bSpace = (bulletStyle !== 'none') ? 40 : 0;
+                updateLayerPosition(ti, [rightAlignX - 15 - bSpace, listCursorY + 10 - tiRect.top]);
+                // Entrance for List Items: Disable if Glass Mode
+                if (!isGlass) {
+                    addEntranceAnimation(ti, stagger, animType, myDuration); 
+                    addTypewriterEffect(ti, stagger, myDuration);
+                } else {
+                    // No typewriter, no entrance
+                }
+                
+                var boxWi = tiRect.width + 30 + bSpace; var boxHi = tiRect.height + 20;
+                var biObj = updateOrCreateTrapezoid(listComp, boxName, cInst.box, rightAlignX, listCursorY, boxWi, boxHi, uiControls.skewInst);
+                if (hideBanners) { biObj.layer.enabled = false; } else { 
+                    biObj.layer.enabled = true; biObj.layer.moveAfter(ti); 
+                    if(!isGlass) addEntranceAnimation(biObj.layer, stagger, animType, myDuration); 
+                }
+                
+                if (bulletStyle !== 'none') {
+                    var bY = listCursorY + 10 + (tiRect.height/2); var bX = rightAlignX - 15 - (bSpace/2);
+                    var geoLayer = addBulletShape(listComp, bulletName, bulletStyle, bX, bY, 20, cInst.text);
+                    geoLayer.enabled = true; geoLayer.moveBefore(ti); 
+                    if(!isGlass) addEntranceAnimation(geoLayer, stagger, animType, myDuration);
+                    geoLayer.parent = scrollNull;
+                } 
+                
+                ti.parent = scrollNull;
+                biObj.layer.parent = scrollNull;
+                
+                var totalLineH = boxHi + GAP_INST_LINES;
+                lineHeights.push(totalLineH);
+                lineStartTimes.push(currentStartTime);
+                activeIndices.push(i);
+                
+                listCursorY += totalLineH; 
+                currentStartTime += myDuration;
+            }
+        }
+        
+        // Scroll Animation Logic
+        var cumulativeScroll = 0;
+        var posProp = scrollNull.property("Position");
+        
+        if (activeIndices.length > 0) {
+             posProp.setValueAtTime(0, [960, 540]);
+        }
+        
+        if (!isGlass) { // Only animate scroll if not glass mode (static)
+            for (var k = 3; k < activeIndices.length; k++) {
+                 var currentLineIdx = k; 
+                 var startTimeOfLine = lineStartTimes[currentLineIdx]; 
+                 var durationOfLine = durations[activeIndices[currentLineIdx]]; 
+                 var scrollOutHeight = lineHeights[k-3];
+                 
+                 var t1 = startTimeOfLine;
+                 var val1 = [960, 540 - cumulativeScroll];
+                 posProp.setValueAtTime(t1, val1);
+                 
+                 cumulativeScroll += scrollOutHeight;
+                 var t2 = startTimeOfLine + durationOfLine; 
+                 var val2 = [960, 540 - cumulativeScroll];
+                 posProp.setValueAtTime(t2, val2);
+            }
+        } else {
+             // Glass mode: static layout. Usually list is static too? 
+             // If static, maybe show all lines or just first 3?
+             // Prompt says "Open composition fully open without animations".
+             // This might imply showing all text? But list height is limited.
+             // For now, we just disable the scrolling *animation*, meaning it stays at top.
+             // If user wants to see all, they fit in 1080p if < 8 lines usually.
+             // We leave it at start position [960, 540] (cumulativeScroll = 0).
+        }
+        
+        comp.motionBlur = true;
+        for (var k = 1; k <= comp.numLayers; k++) { 
+            comp.layer(k).outPoint = comp.duration; 
+            comp.layer(k).motionBlur = true; 
+        }
+
+        // --- Apply Glass Masks if needed (Last Step) ---
+        if (uiControls.glassMode) {
+             applyGlassMaskToComp("PLACE IMAGE HERE");
+             applyGlassMaskToComp("BG IMAGE HERE");
+        }
+    }
+    
+    // --- MAIN EXECUTION ---
+    app.beginUndoGroup("Auto Graphics Run");
+    try {
+        var calcDur = ${calcDur};
+        var config = {
+            title1: ${safeStr(finalTitle1)},
+            title2: ${safeStr(title2)},
+            instValues: ${safeStr(finalInst)},
+            enValues: ${safeStr(enValues)},
+            durations: [${durations.join(',')}],
+            disclaimer: ${safeStr(disclaimer)},
+            colorBg: "${colBg}",
+            color1: "${col1}",
+            color2: "${col2}",
+            colorShape: "${colShape}",
+            colorInst: "${colInst}",
+            colorShine: "${colShine}",
+            colorDiscBanner: "${colDiscBanner}",
+            colorDiscEdge: "${colDiscEdge}",
+            skewT1: ${skewT1},
+            skewT2: ${skewT2},
+            skewInst: ${skewInst},
+            skewMask: ${skewMask},
+            enableShine: ${enableShine},
+            shineWidth: "${shineW}",
+            shineSpeed: "${shineSpd}",
+            shineGlow: ${shineGlow},
+            shineStatic: ${shineStatic},
+            shineOffset: "${shineOffset}",
+            disableGraphic: ${disableGraphic},
+            invertColors: ${invertColors},
+            disableTitle2: ${disableTitle2},
+            hideInstBanners: ${hideInstBanners},
+            hideBoxTitle1: ${hideBoxTitle1},
+            hideBoxTitle2: ${hideBoxTitle2},
+            glassMode: ${glassMode}, // Pass glassMode
+            bulletStyle: "${bulletStyle}",
+            animType: "${animType}",
+            animMain: ${animMain},
+            animBG: ${animBG},
+            mediaFolderPath: ${safeStr(mediaFolderPath)},
+            mediaMainFileName: ${safeStr(mediaMainFileName)},
+            mediaBgFileName: ${safeStr(mediaBgFileName)},
+            hasAudio: ${hasAudio}
+        };
+
+        var comp = createHDComp("Auto Graphics Comp", calcDur, 24);
+        
+        // Import Prompts
+        if (config.hasAudio) {
+            importAudioFromDialog("PUT AUDIO HERE");
+        }
+        
+        importMediaFromDialog("BG IMAGE HERE", "center", config.mediaFolderPath, config.mediaBgFileName); 
+        if (!config.disableGraphic) {
+             importMediaFromDialog("PLACE IMAGE HERE", "${imgAlign}", config.mediaFolderPath, config.mediaMainFileName);
+        }
+
+        createGraphics(comp, config, calcDur);
+        
+    } catch(err) {
+        alert("Script Error: " + err.toString());
+    }
+    app.endUndoGroup();
+
+})();`;
+    }
+    
+    function downloadAEScript() {
+        const scriptStr = generateAEScriptContent();
+        const blob = new Blob([scriptStr], { type: 'application/octet-stream' });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = "BULLETS AFTER DEMO.jsx";
+        document.body.appendChild(link); 
+        link.click();
+        document.body.removeChild(link);
+    }
+    
+    function downloadAllAsZip() {
+        var zip = new JSZip();
+        var rootFolder = zip.folder("Graphics_Package");
+        rootFolder.file("BULLETS AFTER DEMO.jsx", generateAEScriptContent());
+        rootFolder.file("BULLETS FORM DEMO.txt", generateEmailTemplateContent());
+        
+        zip.generateAsync({type:"blob"}).then(function(content) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = "Graphics_Package.zip";
+            link.click();
+        });
+    }
+</script>
+
+</body>
+</html>
