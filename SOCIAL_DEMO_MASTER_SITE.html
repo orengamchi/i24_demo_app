@@ -1,0 +1,2609 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SOCIAL DEMO - Final</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- הוספת פונט Assistant כגיבוי לאלמוני -->
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #e0e0e0;
+            --sidebar-bg: #ffffff;
+            --header-bg: #343a40;
+            --header-text: #fff;
+            --accent-color: #4a90e2;
+            --border-color: #e9ecef;
+            --active-green: #2ecc71;
+            --text-color: #495057;
+            --error-red: #e74c3c;
+            --input-bg: #f8f9fa;
+            --hover-bg: #e9ecef;
+            
+            /* New Colors for UI Distinction */
+            --label-color: #1565c0; /* כחול כהה לכותרות */
+            --input-text-color: #212121; /* שחור כמעט מלא לטקסט מילוי */
+        }
+
+        body {
+            /* עדכון פונט לאלמוני עם גיבוי */
+            font-family: 'Almoni Tzar AAA', 'Almoni DL AAA', 'Assistant', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0; padding: 20px;
+            display: flex; gap: 20px;
+            height: 100vh; height: 100dvh;
+            box-sizing: border-box; overflow: hidden;
+        }
+
+        /* Layout Container */
+        .container {
+            display: flex; width: 100%; max-width: 1600px;
+            margin: 0 auto; background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border-radius: 8px; overflow: hidden; height: 100%;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 420px; background-color: var(--sidebar-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex; flex-direction: column; flex-shrink: 0; height: 100%;
+        }
+
+        .main-header {
+            background: var(--header-bg); color: var(--header-text);
+            padding: 15px; text-align: center; font-weight: 600;
+            font-size: 1.1em; flex-shrink: 0;
+            border-bottom: 3px solid var(--accent-color);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .edition-name {
+            font-size: 0.8em; color: #adb5bd; font-weight: normal; margin-top: 4px;
+        }
+
+        /* Controls */
+        .top-controls {
+            padding: 15px; background-color: var(--input-bg);
+            border-bottom: 1px solid #dee2e6; flex-shrink: 0;
+            display: flex; justify-content: space-around; align-items: center; gap: 10px;
+        }
+
+        .control-icon-btn {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; background: white; border: 1px solid #dee2e6;
+            border-radius: 8px; padding: 10px; width: 100%; transition: all 0.2s;
+            text-align: center; color: var(--text-color);
+        }
+        .control-icon-btn:hover { background: var(--hover-bg); transform: translateY(-2px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .control-icon-btn svg { width: 28px; height: 28px; margin-bottom: 5px; }
+        .control-icon-btn span { font-size: 12px; font-weight: 600; }
+
+        .glass-btn {
+            width: 100%; padding: 12px; background-color: #f1f3f5;
+            border: 2px solid #dee2e6; border-radius: 6px; color: var(--text-color);
+            font-weight: 600; cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            margin: 5px 0 10px 0;
+        }
+        .glass-btn.active { background-color: #e8f5e9; border-color: var(--active-green); color: var(--active-green); }
+        .glass-btn svg { width: 20px; height: 20px; fill: currentColor; }
+
+        /* Content Area */
+        .scroll-content {
+            flex: 1; overflow-y: auto; padding: 10px;
+            scrollbar-width: thin; scrollbar-color: #ccc transparent;
+        }
+        .scroll-content::-webkit-scrollbar { width: 6px; }
+        .scroll-content::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 3px; }
+
+        /* Accordion */
+        .control-group {
+            background: var(--input-bg); margin-bottom: 8px;
+            border-radius: 4px; border: 1px solid #dee2e6; overflow: hidden;
+        }
+        .control-group h3 {
+            margin: 0; padding: 12px 15px; font-size: 14px; font-weight: 600;
+            color: var(--text-color); background-color: var(--hover-bg);
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+            user-select: none; border-left: 4px solid transparent; transition: background 0.2s;
+        }
+        .control-group h3:hover { background-color: #dee2e6; }
+        .control-group.open h3 { background-color: #fff; border-bottom: 1px solid #dee2e6; border-left-color: var(--accent-color); color: var(--accent-color); }
+        .control-group h3::after { content: '◀'; font-size: 10px; color: #adb5bd; transition: transform 0.3s; }
+        .control-group.open h3::after { transform: rotate(-90deg); }
+        
+        .group-content { padding: 15px; background: #fff; display: none; }
+        .control-group.open .group-content { display: block; animation: slideDown 0.3s ease-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Collapsible Details (Custom Style) */
+        details {
+            background: #f4f4f4; border-radius: 4px; overflow: hidden; margin-top: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        summary {
+            padding: 8px 12px; cursor: pointer; font-size: 12px; font-weight: 600; color: #555;
+            user-select: none; outline: none; background: #f9f9f9;
+        }
+        summary:hover { background: #eee; }
+        details[open] summary { border-bottom: 1px solid #e0e0e0; }
+        .details-content { padding: 10px; }
+
+        /* Forms - Updated with color distinction */
+        .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 10px; }
+        .input-wrapper { flex: 1; }
+        
+        /* Label Color Update */
+        label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 700; color: var(--label-color); }
+        
+        input[type="text"], input[type="number"], input[type="password"], textarea, select {
+            width: 100%; padding: 8px 10px; margin-bottom: 5px;
+            border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box;
+            font-family: inherit; font-size: 13px; transition: border-color 0.2s;
+            /* Input Text Color Update */
+            color: var(--input-text-color);
+            background-color: #fff;
+        }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.15); }
+        
+        /* Range Sliders */
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        /* Custom Color Picker */
+        .custom-color-picker {
+            position: relative; width: 40px; height: 32px;
+        }
+        .color-preview {
+            width: 100%; height: 100%; border-radius: 4px; border: 1px solid #ced4da;
+            cursor: pointer; box-shadow: inset 0 0 3px rgba(0,0,0,0.1);
+        }
+        .color-options {
+            position: absolute; top: 100%; left: 0; z-index: 100;
+            background: white; border: 1px solid #ccc; border-radius: 4px;
+            padding: 5px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+            width: 120px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .color-swatch {
+            width: 24px; height: 24px; border-radius: 3px; cursor: pointer; border: 1px solid #eee;
+        }
+        .color-swatch:hover { transform: scale(1.1); border-color: #999; }
+
+        .checkbox-label { font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 6px; color: #6c757d; }
+        .checkbox-label input:checked + span { color: var(--active-green); font-weight: 600; }
+
+        .file-upload-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+        .file-upload-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+        .file-btn {
+            background: #fff; border: 1px dashed var(--accent-color); color: var(--accent-color);
+            padding: 8px; border-radius: 4px; text-align: center; width: 100%;
+            font-size: 13px; cursor: pointer; transition: 0.2s;
+        }
+        .file-btn:hover { background: #f0f8ff; }
+        .file-btn.active { background: #e8f5e9; border-color: var(--active-green); color: var(--active-green); }
+        
+        /* Updated Copy Button Style */
+        .url-row { display: flex; gap: 5px; align-items: center; }
+        .copy-btn { 
+            padding: 8px; background: #fff; border: 1px solid #ced4da; 
+            border-radius: 4px; cursor: pointer; color: #495057; 
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; min-width: 36px;
+        }
+        .copy-btn:hover { background: #e9ecef; }
+        .copy-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+        /* Gallery Grid */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+            margin-bottom: 10px;
+        }
+        .gallery-item {
+            aspect-ratio: 16/9;
+            background: #eee;
+            border-radius: 4px;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .gallery-item:hover {
+            border-color: var(--accent-color);
+            transform: scale(1.02);
+        }
+        .gallery-item img, .gallery-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .gallery-item span {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            font-size: 9px;
+            padding: 3px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Preview */
+        .preview-area {
+            flex: 1; background-color: #212529; display: flex;
+            justify-content: center; align-items: center; padding: 20px;
+            position: relative; overflow: hidden;
+        }
+        canvas {
+            background-color: #000; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            width: 100%; height: auto; max-width: 100%; max-height: 100%;
+            aspect-ratio: 16 / 9; object-fit: contain;
+            cursor: grab; /* Added cursor for drag indication */
+        }
+        canvas:active { cursor: grabbing; } /* Cursor change on active */
+        
+        .play-overlay { position: absolute; bottom: 30px; left: 30px; z-index: 10; }
+        .play-btn {
+            width: 50px; height: 50px; border-radius: 50%;
+            background-color: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.8);
+            color: white; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px); transition: all 0.3s;
+        }
+        .play-btn:hover { background-color: var(--accent-color); transform: scale(1.1); border-color: transparent; }
+        .play-btn svg { fill: white; width: 20px; height: 20px; margin-left: 3px; }
+
+        /* Footer */
+        .btn-container { padding: 15px; background: #fff; border-top: 1px solid #dee2e6; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; z-index: 5; }
+        .action-btn { padding: 12px; color: white; border: none; border-radius: 5px; font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.2s; }
+        .ae-btn { background-color: #6610f2; } .ae-btn:hover { background-color: #520dc2; }
+        .secondary-btn { padding: 8px; background: #495057; color: white; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-size: 13px; text-align: center; }
+        .secondary-btn:hover { background: #343a40; }
+        .copyright-footer { margin-top: 5px; text-align: center; font-size: 11px; color: #adb5bd; }
+
+        /* Utility */
+        .hidden { display: none !important; }
+        .error-border { border-color: var(--error-red) !important; background-color: #fdecea !important; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            body { padding: 0; height: 100dvh; overflow: hidden; }
+            .container { flex-direction: column; height: 100%; border-radius: 0; }
+            .preview-area { flex: 0 0 35vh; width: 100%; border-bottom: 4px solid var(--accent-color); background: #111; z-index: 10; padding: 10px; }
+            .sidebar { flex: 1; width: 100%; border-left: none; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+            .scroll-content { overflow: visible; flex: none; height: auto; padding-bottom: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="sidebar">
+        <div class="main-header">
+            SOCIAL DEMO
+            <div id="editionName" class="edition-name"></div>
+        </div>
+        
+        <div class="top-controls">
+            <label class="control-icon-btn" title="טען טופס ריפורטר">
+                <svg viewBox="0 0 24 24"><path fill="#2ecc71" d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+                <span>טען טופס</span>
+                <input type="file" id="reporterFile" accept=".txt" class="hidden">
+            </label>
+            <div class="control-icon-btn" id="btnDownloadTemplate" title="הורד טופס הזמנה">
+                <svg viewBox="0 0 24 24"><path fill="#e74c3c" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                <span>הורד טופס</span>
+            </div>
+        </div>
+
+        <div class="scroll-content">
+            <!-- Group 1: API & Data -->
+            <div class="control-group" id="group-api">
+                <h3 data-group="group-api">ניהול נתונים ו-API</h3>
+                <div class="group-content">
+                    <label>Google Gemini API Key:</label>
+                    <div style="display:flex; gap:5px;">
+                        <input type="password" id="apiKeyInput" placeholder="Paste Key Here...">
+                        <label class="control-icon-btn" style="width:40px; padding: 5px;" title="Load Key from TXT">
+                             <svg viewBox="0 0 24 24" style="width:20px; height:20px; margin:0;"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                             <input type="file" id="apiKeyFile" accept=".txt" class="hidden">
+                        </label>
+                    </div>
+                    
+                    <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #dee2e6;">
+                        <label style="margin-bottom:5px;">תמלול אודיו (AI):</label>
+                        <div style="display:flex; gap:10px;">
+                            <label class="control-icon-btn" style="flex:1; padding:6px; height:auto; flex-direction:row; gap:5px;">
+                                <svg viewBox="0 0 24 24" style="width:20px; height:20px; margin:0;"><path fill="#4a90e2" d="M12 3v9.28a4.39 4.39 0 0 0-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>
+                                <span id="audioLabel">טען אודיו</span>
+                                <input type="file" id="audioFileInput" accept="audio/*" class="hidden">
+                            </label>
+                            <div class="control-icon-btn" id="transcribeBtn" style="flex:1; padding: 6px; margin:0; height:auto; flex-direction: row; gap: 5px;">
+                                <svg viewBox="0 0 24 24" style="width:20px; height:20px; margin:0;"><path fill="#2ecc71" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 6h-4v2h4v2h-4v2h4v2H9V7h6v2z"/></svg>
+                                <span>תמלל</span>
+                            </div>
+                        </div>
+                        <div class="url-row" style="margin-top:5px;">
+                            <input type="text" id="audioPathUrl" placeholder="נתיב קובץ אודיו (לסקריפט AE)" style="width:100%; font-size:11px; color:#666;" class="live-update">
+                             <button class="copy-btn" title="העתק נתיב" onclick="UI.copyToClipboard('audioPathUrl')">
+                                 <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                             </button>
+                        </div>
+                        <div id="transcribeStatus" style="font-size:11px; color:#666; margin-top:5px; text-align:center;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group 2: Media -->
+            <div class="control-group open" id="group-media">
+                <h3 data-group="group-media">מדיה (תמונות/וידאו)</h3>
+                <div class="group-content">
+                    <label>תיקיית מדיה (קבצים מקומיים):</label>
+                    <input type="text" id="mediaFolderPath" value="C:\Users\user\Desktop\oren_plugin_demo\MEDIA FILES" placeholder="נתיב...">
+                    
+                    <div style="border-top:1px solid #eee; margin:10px 0; padding-top:10px;"></div>
+
+                    <label>תמונה/וידאו ראשי (Main):</label>
+                    <div class="file-upload-wrapper">
+                        <button class="file-btn" id="btnMediaMain">בחר קובץ</button>
+                        <input type="file" id="fileMediaMain" accept="image/*,video/*">
+                    </div>
+                    <div class="url-row">
+                         <input type="text" id="mediaMainUrl" placeholder="URL / שם קובץ" style="margin-top:5px; font-size:11px; color:#666;" class="live-update">
+                         <button class="copy-btn" title="העתק נתיב" onclick="UI.copyToClipboard('mediaMainUrl')">
+                             <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                         </button>
+                    </div>
+                    <input type="hidden" id="mediaMainFileName">
+
+                    <div style="margin-top:8px; display:flex; gap:10px; display:none;"> <!-- Hidden Alignment - Default Center -->
+                        <label style="font-size:12px; font-weight:normal;">יישור:</label>
+                        <label class="checkbox-label"><input type="radio" name="imgAlign" value="center" checked class="live-update"> מרכז</label>
+                    </div>
+                    
+                    <!-- UPDATED COLLAPSIBLE IMAGE ADJUSTMENT -->
+                    <details>
+                        <summary>התאמת תמונה ראשית (לחץ לפתיחה)</summary>
+                        <div class="details-content">
+                            <div class="input-row" style="margin-bottom:5px;">
+                                <label style="font-size:11px; width:40px;">Scale:</label>
+                                <input type="range" id="mainImgScale" min="10" max="300" value="100" class="live-update">
+                            </div>
+                            <div class="input-row" style="margin-bottom:5px;">
+                                <label style="font-size:11px; width:40px;">Pos X:</label>
+                                <input type="range" id="mainImgX" min="-1000" max="1000" value="0" class="live-update">
+                            </div>
+                            <div class="input-row" style="margin-bottom:5px;">
+                                <label style="font-size:11px; width:40px;">Pos Y:</label>
+                                <input type="range" id="mainImgY" min="-1000" max="1000" value="0" class="live-update">
+                            </div>
+                            <div class="input-row" style="margin-bottom:0;">
+                                <label style="font-size:11px; width:40px;">Rotate:</label>
+                                <input type="range" id="mainImgRot" min="-180" max="180" value="0" class="live-update">
+                            </div>
+                        </div>
+                    </details>
+
+                    <div style="border-top:1px solid #eee; margin:10px 0; padding-top:10px;"></div>
+
+                    <label>רקע (Background):</label>
+                    <div class="file-upload-wrapper">
+                        <button class="file-btn" id="btnMediaBG">בחר רקע</button>
+                        <input type="file" id="fileMediaBG" accept="image/*,video/*">
+                    </div>
+                    <div class="url-row">
+                        <input type="text" id="mediaBgUrl" placeholder="URL / שם קובץ" style="margin-top:5px; font-size:11px; color:#666;" class="live-update">
+                        <button class="copy-btn" title="העתק נתיב" onclick="UI.copyToClipboard('mediaBgUrl')">
+                             <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                         </button>
+                    </div>
+                    <input type="hidden" id="mediaBgFileName">
+                    
+                    <!-- BACKGROUND GALLERY -->
+                    <div style="margin-top:8px;">
+                        <label style="font-size:12px; color:#555;">בחר מהגלריה:</label>
+                        <div class="gallery-grid" id="bgGallery"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group 3: General -->
+            <div class="control-group" id="group-general">
+                <h3 data-group="group-general">הגדרות ועיצוב</h3>
+                <div class="group-content">
+                    <div class="input-row">
+                        <label>משך זמן:</label>
+                        <select id="durationMode" class="live-update">
+                            <option value="0">לפי אורך אודיו (Default)</option>
+                            <option value="1" selected>30 שניות</option>
+                            <option value="2">45 שניות</option>
+                            <option value="3">90 שניות</option>
+                        </select>
+                    </div>
+
+                    <button class="glass-btn" id="btnGlassMode">
+                        <svg viewBox="0 0 24 24"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+                        <span>מצב קיר זכוכית (PNG)</span>
+                    </button>
+                    <input type="checkbox" id="glassMode" class="hidden live-update">
+
+                    <label class="checkbox-label"><input type="checkbox" id="skewMask" class="live-update" checked> <span>Skew Mask?</span></label>
+                    <div style="margin: 5px 0; padding: 5px; background: #f1f3f5; border-radius: 4px;">
+                         <label class="checkbox-label"><input type="checkbox" id="animMain" checked class="live-update"> <span>Animate Main Image</span></label>
+                    </div>
+
+                    <!-- Shine -->
+                    <div style="background:#f0f0f0; padding:8px; border-radius:4px; margin-bottom:8px;">
+                        <label class="checkbox-label"><input type="checkbox" id="enableShine" checked class="live-update"> <span>Enable Shine Line</span></label>
+                        <div id="shineSettings" style="margin-top:5px; padding-top:5px; border-top:1px solid #ddd;">
+                            <div class="input-row">
+                                <label style="font-size:11px;">עובי (px):</label>
+                                <!-- Default updated to 10 as requested -->
+                                <input type="number" id="shineWidth" value="10" class="live-update" style="width:50px;">
+                            </div>
+                             <div class="input-row">
+                                <label style="font-size:11px;">תיקון X:</label>
+                                <!-- Updated Default to 5 as requested -->
+                                <input type="number" id="shineOffset" value="5" class="live-update" style="width:50px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <label class="checkbox-label"><input type="checkbox" id="disableGraphic" class="live-update"> <span>Hide Graphic</span></label>
+                    
+                    <div style="background:#fff3cd; padding:8px; border-radius:4px; margin-bottom:8px;">
+                        <label>דיסקליימר:</label>
+                        <input type="text" id="disclaimer" value="דיסקליימר - פלאש 90" class="live-update">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group 4: Titles -->
+            <div class="control-group" id="group-titles">
+                <h3 data-group="group-titles">כותרות</h3>
+                <div class="group-content">
+                    <label>כותרת ראשית (2 שורות מותרות, מקס' 50 תווים):</label>
+                    <div class="input-row">
+                        <textarea id="title1" rows="2" maxlength="50" class="live-update">כותרת ראשית</textarea>
+                        
+                        <!-- Custom Color Picker 1 -->
+                        <div class="custom-color-picker" id="picker1">
+                            <div class="color-preview" id="previewColor1" style="background-color: #0000FF;"></div>
+                            <div class="color-options hidden" id="optionsColor1"></div>
+                        </div>
+                        <input type="hidden" id="color1" value="#0000FF" class="live-update">
+                    </div>
+                    
+                    <div class="input-row" style="margin-top:5px;">
+                        <label>גודל:</label>
+                        <!-- Updated Default to 90 (20% less than 113) -->
+                        <input type="range" id="title1Size" min="80" max="250" value="90" class="live-update" style="flex:1; margin:0 10px;">
+                        <span id="t1SizeVal">90</span>
+                    </div>
+
+                    <div style="display:flex; gap:15px; margin-bottom:10px;">
+                        <label class="checkbox-label"><input type="checkbox" id="skewTitle1" checked class="live-update"> <span>Skew</span></label>
+                        <label class="checkbox-label"><input type="checkbox" id="hideBoxTitle1" class="live-update"> <span>Hide Box</span></label>
+                    </div>
+
+                    <label>כותרת משנה (13 תווים מקס'):</label>
+                    <div class="input-row">
+                        <input type="text" id="title2" value="שם המצוטט" maxlength="13" class="live-update">
+                        
+                        <!-- Custom Color Picker 2 -->
+                        <div class="custom-color-picker" id="picker2">
+                            <div class="color-preview" id="previewColor2" style="background-color: #87CEFA;"></div>
+                            <div class="color-options hidden" id="optionsColor2"></div>
+                        </div>
+                        <input type="hidden" id="color2" value="#87CEFA" class="live-update">
+                    </div>
+                    <!-- NEW SLIDER FOR TITLE 2 SIZE -->
+                    <div class="input-row" style="margin-top:5px;">
+                         <label>גודל:</label>
+                         <input type="range" id="title2Size" min="50" max="200" value="100" class="live-update" style="flex:1; margin:0 10px;">
+                         <span id="t2SizeVal">100</span>
+                    </div>
+
+                    <div style="display:flex; gap:15px;">
+                        <label class="checkbox-label"><input type="checkbox" id="skewTitle2" checked class="live-update"> <span>Skew</span></label>
+                        <label class="checkbox-label"><input type="checkbox" id="hideBoxTitle2" class="live-update"> <span>Hide Box</span></label>
+                        <label class="checkbox-label"><input type="checkbox" id="disableTitle2" class="live-update"> <span>Disable</span></label>
+                    </div>
+                    
+                    <!-- Hidden inputs for font weights -->
+                    <input type="hidden" id="t1Weight" value="bold" class="live-update">
+                    <input type="hidden" id="t2Weight" value="normal" class="live-update">
+                </div>
+            </div>
+
+            <!-- Group 5: Content List -->
+            <div class="control-group" id="group-content">
+                <h3 data-group="group-content">סושיאל מדיה</h3>
+                <div class="group-content">
+                    
+                    <!-- Profile Pic -->
+                    <label>תמונת פרופיל:</label>
+                    <div class="file-upload-wrapper" style="margin-bottom:10px;">
+                        <button class="file-btn" id="btnProfilePic">בחר תמונה</button>
+                        <input type="file" id="fileProfilePic" accept="image/*">
+                    </div>
+                    <!-- Visible Input for Filename + Copy Btn -->
+                    <div class="url-row" style="margin-bottom:10px;">
+                        <input type="text" id="profileFileName" placeholder="שם קובץ (אוטומטי)" style="font-size:11px; background:#f9f9f9; color:#555; width:100%;">
+                         <button class="copy-btn" title="העתק נתיב" onclick="UI.copyToClipboard('profileFileName')">
+                             <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                         </button>
+                    </div>
+
+
+                    <div class="input-row">
+                         <div class="input-wrapper">
+                            <label>שם תצוגה:</label>
+                            <input type="text" id="socialName" value="ישראל ישראלי" class="live-update">
+                         </div>
+                         <div class="input-wrapper">
+                            <label>שם משתמש (@):</label>
+                            <input type="text" id="socialHandle" value="@israel_news" class="live-update">
+                         </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label>פלטפורמה (לוגו):</label>
+                        <select id="socialPlatform" class="live-update">
+                            <option value="Twitter">Twitter / X</option>
+                            <option value="Facebook">Facebook</option>
+                            <option value="Instagram">Instagram</option>
+                            <option value="LinkedIn">LinkedIn</option>
+                            <option value="WhatsApp">WhatsApp</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-row">
+                         <label>צבע כרטיסייה (Back Card):</label>
+                         
+                         <!-- Custom Color Picker 3 -->
+                         <div class="custom-color-picker" id="pickerInst">
+                            <div class="color-preview" id="previewColorInst" style="background-color: #ffffff;"></div>
+                            <div class="color-options hidden" id="optionsColorInst"></div>
+                        </div>
+                        <input type="hidden" id="colorInst" value="#ffffff" class="live-update">
+                    </div>
+
+                    <div style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                        <label style="margin-bottom:5px;">תוכן הפוסט (מקס 9 שורות):</label>
+                        <textarea id="quoteInput" rows="6" class="live-update" style="width:100%; font-family:inherit; padding:8px;"></textarea>
+                    </div>
+
+                    <div class="input-row" style="margin-top:10px;">
+                        <div style="flex:1;">
+                             <label>אנימציה:</label>
+                            <select id="animType" class="live-update">
+                                <option value="slide">Slide</option>
+                                <option value="scale">Scale</option>
+                                <option value="fade">Fade</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label>מהירות (ללא אודיו):</label>
+                        <input type="number" id="listAnimSpeed" value="1.0" step="0.1" min="0.1" max="10.0" style="width: 60px;" class="live-update">
+                    </div>
+                    
+                    <div style="display:flex; gap:15px; margin-bottom:10px;">
+                        <label class="checkbox-label"><input type="checkbox" id="skewInst" checked class="live-update"> <span>Skew</span></label>
+                    </div>
+                    <!-- Hidden Select for Script Compatibility -->
+                    <select id="bulletStyle" class="hidden"><option value="none">none</option></select>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-container">
+            <button class="action-btn ae-btn" id="btnDownloadAE">📜 שלח לעולם (AE Script)</button>
+            <div class="copyright-footer">© Oren Gamchi | Social Edition</div>
+        </div>
+    </div>
+
+    <!-- Preview Canvas -->
+    <div class="preview-area">
+        <canvas id="mainCanvas" width="1920" height="1080"></canvas>
+        <div class="play-overlay">
+            <button class="play-btn" id="btnPlay" title="Play Animation">
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * SOCIAL DEMO - Optimized Version
+ * Architecture: Singleton State -> Singleton UI Manager -> Canvas Renderer
+ */
+
+// --- CONSTANTS ---
+const CHANNEL_COLORS = [
+    '#001233', '#0000FF', '#87CEFA', '#00FFFF', 
+    '#FF0000', '#8B0000', '#FFA500', '#FFD700', 
+    '#2ECC71', '#800080', '#FFFFFF', '#000000', '#808080'
+];
+
+// Direct links to raw content - With Titles and Fonts configuration
+const BG_GALLERY_ITEMS = [
+    { 
+        name: "הישראלים", 
+        fileName: "הישראלים.mp4", 
+        url: "https://raw.githubusercontent.com/orengamchi/i24_demo_app/main/%D7%94%D7%99%D7%A9%D7%A8%D7%90%D7%9C%D7%99%D7%9D.mp4", 
+        type: 'video',
+        title1: "הישראלים",
+        title2: "אורי קואל",
+        config: {
+            col1: '#0000CD', col2: '#87CEEB', disableGraphic: false, disableT2: false, anim: 'scale',
+            t1Weight: '900', t2Weight: '300' // Heavy / Light
+        }
+    },
+    { 
+        name: "מדברים חדשות", 
+        fileName: "מדברים חדשות.mp4", 
+        url: "https://raw.githubusercontent.com/orengamchi/i24_demo_app/main/%D7%9E%D7%93%D7%91%D7%A8%D7%99%D7%9D%20%D7%97%D7%93%D7%A9%D7%95%D7%AA.mp4", 
+        type: 'video',
+        title1: "מדברים חדשות",
+        title2: "פאנל החדשות",
+        config: {
+            col1: '#D32F2F', col2: '#F44336', disableGraphic: true, disableT2: false, anim: 'slide',
+            t1Weight: '800', t2Weight: '400' // ExtraBold / Regular
+        }
+    },
+    { 
+        name: "מהדורה מרכזית", 
+        fileName: "מהדורה מרכזית.mp4", 
+        url: "https://raw.githubusercontent.com/orengamchi/i24_demo_app/main/%D7%9E%D7%94%D7%93%D7%95%D7%A8%D7%94%20%D7%9E%D7%A8%D7%9B%D7%96%D7%99%D7%AA.mp4", 
+        type: 'video',
+        title1: "מהדורה מרכזית",
+        title2: "מירי מיכאלי",
+        config: {
+            col1: '#0000FF', col2: '#87CEFA', disableGraphic: false, disableT2: false, anim: 'fade',
+            t1Weight: '900', t2Weight: '300' // Heavy / Light
+        }
+    },
+    { 
+        name: "מועדון עסקי", 
+        fileName: "מועדון עסקי.mp4", 
+        url: "https://raw.githubusercontent.com/orengamchi/i24_demo_app/main/%D7%9E%D7%95%D7%A2%D7%93%D7%95%D7%9F%20%D7%A2%D7%A1%D7%A7%D7%99.mp4", 
+        type: 'video',
+        title1: "מועדון עסקי",
+        title2: "ניב גלבוע",
+        config: {
+            col1: '#B8860B', col2: '#333333', disableGraphic: true, disableT2: true, anim: 'slide',
+            t1Weight: '700', t2Weight: '300' // Bold / Light
+        }
+    },
+    { 
+        name: "ערביסטים", 
+        fileName: "ערביסטים.mp4", 
+        url: "https://raw.githubusercontent.com/orengamchi/i24_demo_app/main/%D7%A2%D7%A8%D7%91%D7%99%D7%A1%D7%98%D7%99%D7%9D.mp4", 
+        type: 'video',
+        title1: "ערביסטים",
+        title2: "פאנל המזרח התיכון",
+        config: {
+            col1: '#006400', col2: '#32CD32', disableGraphic: false, disableT2: false, anim: 'scale',
+            t1Weight: '900', t2Weight: '600' // Heavy / SemiBold
+        }
+    }
+];
+
+// Center for "Third" Graphic - Shifted Left to 340 to allow full cover
+const SHLISH_CENTER_X = 340; 
+
+// --- STATE MANAGEMENT ---
+const State = {
+    apiKey: "",
+    audio: { url: null, duration: 0, element: null },
+    media: {
+        main: { type: null, element: null, fileName: null },
+        bg: { type: null, element: null, fileName: null },
+        profile: { element: null, fileName: null } // Added Profile
+    },
+    bgTransition: { active: false, start: 0, dur: 800, oldEl: null, oldType: null, oldCol: null },
+    anim: { id: null, start: 0, isPlaying: false },
+    lines: [],
+    durations: Array(8).fill(1.0),
+    config: {}, // Cached config for render loop
+    dragging: { active: false, lastX: 0, lastY: 0 } // Dragging State
+};
+
+// --- ICONS (SVG Paths) ---
+const SocialIcons = {
+    'Twitter': { path: "M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z", viewbox: 24 },
+    'Facebook': { path: "M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z", viewbox: 24 },
+    'Instagram': { 
+        // Updated Path: Standard Camera Icon (Filled)
+        path: "M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z", 
+        viewbox: 24 
+    },
+    'LinkedIn': { path: "M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z", viewbox: 24 },
+    'WhatsApp': { path: "M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z", viewbox: 24 }
+};
+
+// --- UI MANAGER (DOM Caching & Event Delegation) ---
+const UI = {
+    els: {},
+    init() {
+        // Cache critical elements
+        const ids = [
+            'mainCanvas', 'apiKeyInput', 'apiKeyFile', 'audioFileInput', 'audioLabel', 'audioPathUrl',
+            'transcribeBtn', 'transcribeStatus', 'mediaFolderPath', 
+            'fileMediaMain', 'mediaMainUrl', 'mediaMainFileName', 'btnMediaMain',
+            'fileMediaBG', 'mediaBgUrl', 'mediaBgFileName', 'btnMediaBG',
+            'durationMode', 'btnGlassMode', 'glassMode', 
+            'skewMask', 'animMain', 'enableShine', 'shineSettings', 'shineWidth', 'shineOffset',
+            'disableGraphic', 'disclaimer',
+            'title1', 'color1', 'title1Size', 't1SizeVal', 'skewTitle1', 'hideBoxTitle1',
+            'title2', 'color2', 'skewTitle2', 'hideBoxTitle2', 'disableTitle2',
+            'colorInst', 'animType', 'listAnimSpeed', 'skewInst',
+            'quoteInput', 'btnDownloadAE', 'btnDownloadTemplate', 
+            'reporterFile', 'btnPlay', 'bulletStyle',
+            // New Social Inputs - Added profileFileName to cache
+            'btnProfilePic', 'fileProfilePic', 'profileFileName', 'socialName', 'socialHandle', 'socialPlatform',
+            'editionName',
+            // Main Image Controls
+            'mainImgScale', 'mainImgX', 'mainImgY', 'mainImgRot',
+            // Font weights
+            't1Weight', 't2Weight', 'title2Size', 't2SizeVal'
+        ];
+        ids.forEach(id => this.els[id] = document.getElementById(id));
+        
+        this.ctx = this.els.mainCanvas.getContext('2d');
+        // Initial setup for quote input
+        this.els.quoteInput.value = "כאן נכנס תוכן הפוסט...\nאפשר לכתוב מספר שורות\nוהן יוצגו בתוך כרטיסיית הסושיאל.";
+        
+        // Populate config immediately
+        State.config = this.getConfig();
+
+        this.initColorPickers();
+        this.renderGallery();
+        this.attachEvents();
+        this.toggleShine(); // Initial state
+        
+        // --- NEW DEFAULTS (Requested by User) ---
+        // Set default path for Main Image URL Input
+        this.els.mediaMainUrl.value = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\SHLISH\\";
+        
+        // Set default path for Profile Filename Input (User can append name)
+        this.els.profileFileName.value = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\SOCIAL\\";
+        
+        // Set default path for Audio Input
+        this.els.audioPathUrl.value = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\AUDIO\\";
+
+        // Load default background (first item in gallery)
+        const defaultBg = BG_GALLERY_ITEMS[0];
+        if (defaultBg) {
+            // Default setup: URL for preview, FileName + Folder for AE
+            const folder = this.els.mediaFolderPath.value;
+            const sep = folder.includes('/') ? '/' : '\\'; 
+            const cleanFolder = folder.endsWith(sep) ? folder : folder + sep;
+            
+            // For HTML URL input: Use Local Path logic as requested
+            this.els.mediaBgUrl.value = cleanFolder + defaultBg.fileName;
+            
+            this.els.mediaBgFileName.value = defaultBg.fileName; 
+            // Load Preview from Web URL (GitHub)
+            this.handleMedia('bg', { url: defaultBg.url, name: defaultBg.name, type: 'video' });
+            
+            // Apply default theme and titles
+            this.applyTheme(defaultBg); // Updated to pass full item
+        }
+        
+        // Initial render to populate state
+        CanvasRenderer.draw(true);
+    },
+
+    initColorPickers() {
+        // Init 3 custom pickers
+        this.setupCustomPicker('picker1', 'previewColor1', 'optionsColor1', 'color1');
+        this.setupCustomPicker('picker2', 'previewColor2', 'optionsColor2', 'color2');
+        this.setupCustomPicker('pickerInst', 'previewColorInst', 'optionsColorInst', 'colorInst');
+    },
+
+    setupCustomPicker(pickerId, previewId, optionsId, inputId) {
+        const picker = document.getElementById(pickerId);
+        const preview = document.getElementById(previewId);
+        const options = document.getElementById(optionsId);
+        const input = document.getElementById(inputId);
+
+        // Populate options
+        CHANNEL_COLORS.forEach(color => {
+            const swatch = document.createElement('div');
+            swatch.className = 'color-swatch';
+            swatch.style.backgroundColor = color;
+            swatch.onclick = (e) => {
+                e.stopPropagation();
+                input.value = color;
+                preview.style.backgroundColor = color;
+                options.classList.add('hidden');
+                CanvasRenderer.draw(true); // Trigger update
+            };
+            options.appendChild(swatch);
+        });
+
+        // Toggle visibility
+        preview.onclick = (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.color-options').forEach(el => {
+                if (el.id !== optionsId) el.classList.add('hidden');
+            });
+            options.classList.toggle('hidden');
+        };
+    },
+    
+    applyTheme(item) {
+        if (!item) return;
+        const theme = item.config;
+        
+        // Apply Titles from item
+        if(item.title1) this.els.title1.value = item.title1;
+        if(item.title2) this.els.title2.value = item.title2;
+
+        if (!theme) return;
+
+        // Apply Font Weights
+        if (theme.t1Weight) this.els.t1Weight.value = theme.t1Weight;
+        if (theme.t2Weight) this.els.t2Weight.value = theme.t2Weight;
+
+        if (theme.col1) {
+            this.els.color1.value = theme.col1;
+            document.getElementById('previewColor1').style.backgroundColor = theme.col1;
+        }
+        if (theme.col2) {
+            this.els.color2.value = theme.col2;
+            document.getElementById('previewColor2').style.backgroundColor = theme.col2;
+        }
+        
+        this.els.disableGraphic.checked = theme.disableGraphic;
+        this.els.disableTitle2.checked = theme.disableT2;
+        
+        if (theme.anim) {
+             this.els.animType.value = theme.anim;
+        }
+        
+        // Trigger update
+        CanvasRenderer.draw(true);
+    },
+
+    copyToClipboard(elementId) {
+        const el = document.getElementById(elementId);
+        if(el) {
+            el.select();
+            document.execCommand('copy');
+        }
+    },
+
+    renderGallery() {
+        const container = document.getElementById('bgGallery');
+        container.innerHTML = '';
+        BG_GALLERY_ITEMS.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'gallery-item';
+            
+            let mediaEl;
+            if (item.type === 'video' || item.url.endsWith('.mp4')) {
+                mediaEl = document.createElement('video');
+                mediaEl.src = item.url;
+                mediaEl.muted = true;
+                mediaEl.loop = true;
+                mediaEl.onmouseover = () => { const p = mediaEl.play(); if(p) p.catch(e=>{}); };
+                mediaEl.onmouseout = () => { mediaEl.pause(); mediaEl.currentTime = 0; };
+                mediaEl.preload = 'metadata';
+                // Add attributes to improve playback
+                mediaEl.setAttribute('playsinline', '');
+                mediaEl.setAttribute('webkit-playsinline', '');
+            } else {
+                mediaEl = document.createElement('img');
+                mediaEl.src = item.url;
+            }
+            
+            div.appendChild(mediaEl);
+            
+            const span = document.createElement('span');
+            span.innerText = item.name;
+            div.appendChild(span);
+            
+            div.onclick = () => {
+                // 1. Trigger preview with Web URL
+                this.handleMedia('bg', { url: item.url, name: item.name, type: 'video' });
+                
+                // 2. Apply Theme & Titles
+                this.applyTheme(item);
+                
+                // 3. Override display to show Local Path
+                const folder = this.els.mediaFolderPath.value;
+                // Basic check to add separator if missing
+                const sep = folder.includes('/') ? '/' : '\\'; 
+                const cleanFolder = folder.endsWith(sep) ? folder : folder + sep;
+                this.els.mediaBgUrl.value = cleanFolder + item.fileName;
+                
+                // 4. Ensure filename hidden input is set for AE logic
+                this.els.mediaBgFileName.value = item.fileName; 
+            };
+            container.appendChild(div);
+        });
+    },
+
+    attachEvents() {
+        // Close color pickers when clicking outside
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.color-options').forEach(el => el.classList.add('hidden'));
+        });
+
+        // Debounced live update for all inputs with class .live-update
+        const update = this.debounce(() => CanvasRenderer.draw(true), 50);
+        document.addEventListener('input', e => {
+            if (e.target.classList.contains('live-update')) update();
+        });
+        document.addEventListener('change', e => {
+            if (e.target.classList.contains('live-update')) {
+                update();
+            }
+        });
+
+        // Social Text Line Limit
+        this.els.quoteInput.addEventListener('input', (e) => {
+            const lines = e.target.value.split('\n');
+            if (lines.length > 9) {
+                e.target.value = lines.slice(0, 9).join('\n');
+            }
+        });
+
+        // Specific handlers
+        this.els.btnPlay.onclick = () => CanvasRenderer.play();
+        this.els.btnGlassMode.onclick = () => {
+            this.els.glassMode.checked = !this.els.glassMode.checked;
+            this.els.btnGlassMode.classList.toggle('active', this.els.glassMode.checked);
+            update();
+        };
+        this.els.enableShine.onchange = () => { this.toggleShine(); update(); };
+        this.els.skewMask.onchange = () => { this.toggleShine(); update(); };
+        this.els.title1Size.oninput = (e) => { this.els.t1SizeVal.innerText = e.target.value; update(); };
+        this.els.title2Size.oninput = (e) => { this.els.t2SizeVal.innerText = e.target.value; update(); };
+        
+        // Files
+        this.els.reporterFile.onchange = (e) => Generators.loadReporter(e.target.files[0]);
+        this.els.btnDownloadTemplate.onclick = () => Generators.downloadTemplate();
+        this.els.btnDownloadAE.onclick = () => Generators.downloadAE();
+        this.els.apiKeyFile.onchange = (e) => this.loadKey(e.target.files[0]);
+        this.els.apiKeyInput.oninput = (e) => State.apiKey = e.target.value;
+        this.els.audioFileInput.onchange = (e) => this.handleAudio(e.target.files[0]);
+        this.els.transcribeBtn.onclick = () => Generators.transcribe();
+        
+        // Media Buttons
+        this.els.btnMediaMain.onclick = () => this.els.fileMediaMain.click();
+        this.els.fileMediaMain.onchange = (e) => this.handleMedia('main', e.target.files[0]);
+        this.els.btnMediaBG.onclick = () => this.els.fileMediaBG.click();
+        this.els.fileMediaBG.onchange = (e) => this.handleMedia('bg', e.target.files[0]);
+        
+        // Profile Pic Button
+        this.els.btnProfilePic.onclick = () => this.els.fileProfilePic.click();
+        this.els.fileProfilePic.onchange = (e) => this.handleMedia('profile', e.target.files[0]);
+
+        // Accordion
+        document.querySelectorAll('.control-group h3').forEach(h3 => {
+            h3.onclick = () => {
+                const group = h3.parentElement;
+                const wasOpen = group.classList.contains('open');
+                document.querySelectorAll('.control-group').forEach(g => g.classList.remove('open'));
+                if(!wasOpen) group.classList.add('open');
+            };
+        });
+
+        // --- DRAG FUNCTIONALITY START ---
+        const canvas = this.els.mainCanvas;
+        
+        canvas.addEventListener('mousedown', (e) => {
+            // Check if main image exists before allowing drag
+            if (!State.media.main.element) return; 
+            
+            State.dragging.active = true;
+            
+            const rect = canvas.getBoundingClientRect();
+            // Scale factors because displayed canvas size might differ from internal resolution (1920x1080)
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            State.dragging.lastX = e.clientX * scaleX;
+            State.dragging.lastY = e.clientY * scaleY;
+            
+            canvas.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!State.dragging.active) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const currentX = e.clientX * scaleX;
+            const currentY = e.clientY * scaleY;
+            
+            const dx = currentX - State.dragging.lastX;
+            const dy = currentY - State.dragging.lastY;
+            
+            State.dragging.lastX = currentX;
+            State.dragging.lastY = currentY;
+
+            // Update Input Values
+            let newX = parseInt(this.els.mainImgX.value) + dx;
+            let newY = parseInt(this.els.mainImgY.value) + dy;
+            
+            // Constrain values to slider limits to prevent UI sync issues
+            const min = -1000, max = 1000;
+            if (newX < min) newX = min; if (newX > max) newX = max;
+            if (newY < min) newY = min; if (newY > max) newY = max;
+
+            this.els.mainImgX.value = Math.round(newX);
+            this.els.mainImgY.value = Math.round(newY);
+            
+            // Update config and redraw
+            CanvasRenderer.draw(true);
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (State.dragging.active) {
+                State.dragging.active = false;
+                canvas.style.cursor = 'grab';
+            }
+        });
+        // --- DRAG FUNCTIONALITY END ---
+    },
+
+    debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    },
+
+    toggleShine() {
+        const show = this.els.skewMask.checked && this.els.enableShine.checked;
+        this.els.shineSettings.style.display = show ? 'block' : 'none';
+        this.els.enableShine.disabled = !this.els.skewMask.checked;
+    },
+
+    loadKey(file) {
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            this.els.apiKeyInput.value = e.target.result.trim();
+            State.apiKey = this.els.apiKeyInput.value;
+            alert("API Key Loaded!");
+        };
+        reader.readAsText(file);
+    },
+
+    handleAudio(file) {
+        if(!file) return;
+        this.els.audioLabel.innerText = file.name.substring(0,15) + "...";
+        if(State.audio.url) URL.revokeObjectURL(State.audio.url);
+        State.audio.url = URL.createObjectURL(file);
+        State.audio.element = new Audio(State.audio.url);
+        State.audio.element.onloadedmetadata = () => {
+            State.audio.duration = State.audio.element.duration;
+            if(this.els.durationMode.value === '0') CanvasRenderer.draw(true);
+        };
+    },
+
+    handleMedia(slot, file) {
+        if(!file) return;
+        let url, name, type;
+        
+        if (file instanceof File || file instanceof Blob) {
+             url = URL.createObjectURL(file);
+             name = file.name;
+             type = file.type.startsWith('video/') ? 'video' : 'image';
+        } else if (file.url) {
+             url = file.url;
+             name = file.name;
+             type = file.type === 'video' || (file.type && file.type.startsWith('video/')) ? 'video' : 'image';
+        } else { return; }
+        
+        if (slot === 'profile') {
+             this.els.btnProfilePic.innerText = name.substring(0,10)+"...";
+             this.els.btnProfilePic.classList.add('active');
+             if(this.els.profileFileName) this.els.profileFileName.value = name;
+             
+             // --- FIX: Update the URL Box for Profile Pic ---
+             // If user picks file manually, show the constructed local path or at least name
+             const socialFolder = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\SOCIAL\\";
+             this.els.profileFileName.value = socialFolder + name; 
+
+        } else {
+            const btn = slot === 'main' ? this.els.btnMediaMain : this.els.btnMediaBG;
+            const nameField = slot === 'main' ? this.els.mediaMainFileName : this.els.mediaBgFileName;
+            const urlField = slot === 'main' ? this.els.mediaMainUrl : this.els.mediaBgUrl;
+            
+            btn.innerText = name.substring(0,10)+"...";
+            btn.classList.add('active');
+            nameField.value = name;
+            // Note: We don't overwrite urlField value here because we manage it manually in renderGallery/loadReporter 
+            // for the "Local Path Display" logic. But for file inputs, we still need to show something.
+            if(slot !== 'bg' || !urlField.value.includes('http')) {
+                 urlField.value = url; 
+            }
+        }
+
+        this.setMedia(slot, url, type);
+    },
+
+    setMedia(slot, url, type) {
+        let el;
+        if(type === 'video') {
+            el = document.createElement('video');
+            el.src = url;
+            el.muted = true;
+            el.loop = true;
+            el.crossOrigin = "anonymous";
+            // Important attributes for reliable playback
+            el.setAttribute('playsinline', '');
+            el.setAttribute('webkit-playsinline', '');
+            el.autoplay = true;
+
+            el.onloadeddata = () => { 
+                const p = el.play(); 
+                if(p) p.catch(e => { console.log("Auto-play prevented", e); });
+                CanvasRenderer.draw(true); 
+            };
+            
+            el.onerror = () => { console.error("Video load error", url); };
+            
+        } else {
+            el = new Image();
+            el.src = url; 
+            el.crossOrigin = "anonymous";
+            el.onload = () => CanvasRenderer.draw(true);
+        }
+
+        if(slot === 'bg') {
+            State.bgTransition = {
+                active: true, start: performance.now(), dur: 800,
+                oldEl: State.media.bg.element, oldType: State.media.bg.type,
+                oldCol: '#001233'
+            };
+            this.animateBGTransition();
+        }
+        
+        State.media[slot] = { type, element: el };
+        CanvasRenderer.draw(true);
+    },
+
+    animateBGTransition() {
+        const step = () => {
+            if(State.bgTransition.active) {
+                if(performance.now() - State.bgTransition.start < State.bgTransition.dur) {
+                    CanvasRenderer.drawScene(0);
+                    requestAnimationFrame(step);
+                } else {
+                    State.bgTransition.active = false;
+                    State.bgTransition.oldEl = null;
+                    CanvasRenderer.draw(true);
+                }
+            }
+        };
+        step();
+    },
+
+    getConfig() {
+        return {
+            glassMode: this.els.glassMode.checked,
+            durationMode: this.els.durationMode.value,
+            bgCol: '#001233',
+            title1: this.els.title1.value,
+            title1Size: parseInt(this.els.title1Size.value),
+            col1: this.els.color1.value,
+            title2: this.els.title2.value,
+            col2: this.els.color2.value,
+            title2Size: parseInt(this.els.title2Size.value),
+            // Social Config
+            colInst: this.els.colorInst.value, // Now Card Color
+            socialName: this.els.socialName.value,
+            socialHandle: this.els.socialHandle.value,
+            socialPlatform: this.els.socialPlatform.value,
+            postContent: this.els.quoteInput.value,
+            
+            skewT1: this.els.skewTitle1.checked,
+            skewT2: this.els.skewTitle2.checked,
+            skewInst: this.els.skewInst.checked,
+            hideBoxT1: this.els.hideBoxTitle1.checked,
+            hideBoxT2: this.els.hideBoxTitle2.checked,
+            hideInstBanners: false, // Force false since checkbox removed
+            disableT2: this.els.disableTitle2.checked,
+            skewMask: this.els.skewMask.checked,
+            enableShine: this.els.enableShine.checked,
+            shineW: parseFloat(this.els.shineWidth.value) || 6,
+            shineOffset: parseFloat(this.els.shineOffset.value) || 0,
+            animMain: this.els.animMain.checked,
+            disableGraphic: this.els.disableGraphic.checked,
+            disclaimer: this.els.disclaimer.value,
+            invertColors: false, // Removed UI, hardcoded to false
+            imgAlign: document.querySelector('input[name="imgAlign"]:checked').value,
+            animType: this.els.animType.value,
+            listSpeed: parseFloat(this.els.listAnimSpeed.value) || 1.0,
+            
+            // Image Adjustments
+            mainScale: parseInt(this.els.mainImgScale.value) / 100,
+            mainX: parseInt(this.els.mainImgX.value),
+            mainY: parseInt(this.els.mainImgY.value),
+            mainRot: parseInt(this.els.mainImgRot.value),
+
+            // Weights
+            t1Weight: this.els.t1Weight.value || 'bold',
+            t2Weight: this.els.t2Weight.value || 'normal'
+        };
+    }
+};
+
+// --- CANVAS RENDERER ---
+const CanvasRenderer = {
+    play() {
+        if(State.anim.id) cancelAnimationFrame(State.anim.id);
+        State.anim.start = performance.now();
+        State.anim.isPlaying = true;
+        if(State.audio.element) {
+            State.audio.element.currentTime = 0;
+            State.audio.element.play().catch(e=>console.log("Audio play failed",e));
+        }
+        const loop = () => {
+            const now = performance.now();
+            const elapsed = (now - State.anim.start) / 1000;
+            let maxT = 30;
+            const mode = State.config.durationMode;
+            if (mode == '0' && State.audio.duration > 0) maxT = State.audio.duration;
+            else if (mode == '2') maxT = 45;
+            else if (mode == '3') maxT = 90;
+
+            this.drawScene(elapsed);
+            if (elapsed < maxT) State.anim.id = requestAnimationFrame(loop);
+            else { State.anim.isPlaying = false; this.draw(true); }
+        };
+        loop();
+    },
+
+    draw(forceStatic = false) {
+        State.config = UI.getConfig();
+        // Update simple durations logic for social card (single item essentially)
+        State.durations[0] = State.config.listSpeed * 2; 
+
+        if (forceStatic) {
+            if(State.anim.id) cancelAnimationFrame(State.anim.id);
+            State.anim.isPlaying = false;
+            this.drawScene(9999);
+            if(State.audio.element) { State.audio.element.pause(); State.audio.element.currentTime = 0; }
+        }
+    },
+
+    drawScene(time) {
+        const ctx = UI.ctx, cfg = State.config, w = 1920, h = 1080;
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h);
+        this.drawBG(ctx, cfg, time);
+        if(!cfg.disableGraphic) this.drawGraphic(ctx, cfg, time);
+        
+        // Disclaimer (Left Align)
+        if(cfg.disclaimer) {
+            ctx.save();
+            ctx.globalAlpha = cfg.glassMode ? 1 : (time < 2 ? 0 : (time < 3 ? time - 2 : 1));
+            ctx.fillStyle = "rgba(255,255,255,0.8)"; 
+            // Use Almoni if available, fallback to Arial
+            ctx.font = "20px 'Almoni Tzar AAA', 'Almoni DL AAA', 'Assistant', 'Segoe UI', Arial, sans-serif";
+            ctx.textAlign = "left"; // Left align for left side
+            ctx.fillText(cfg.disclaimer, 120, 960); 
+            ctx.restore();
+        }
+
+        let cursorY = 200;
+        // Expanded Padding Logic for Canvas
+        // Increased padding to expand banners vertically (requested +5px more, total 17)
+        const extraPad = 17; 
+        
+        if(cfg.title1) {
+            const trans = cfg.glassMode ? null : this.getTransform(time, 0.5, 0.8, 'slide', 1800, cursorY);
+            // Title 1: Use specific weight from config
+            cursorY += this.drawTextBox(ctx, cfg.title1, cfg.title1Size, "#fff", cfg.col1, 1800, cursorY - extraPad, 40, cfg.t1Weight, cfg.skewT1, trans, cfg.hideBoxT1, false, 1, extraPad) + 30;
+        } else cursorY += (cfg.title1Size * 1.2) + 40;
+        
+        if(!cfg.disableT2 && cfg.title2) {
+            const trans = cfg.glassMode ? null : this.getTransform(time, 0.7, 0.8, 'slide', 1800, cursorY);
+            // Title 2: Use specific weight from config
+            // --- UPDATED PADDING: Changed from 50 to 70 for extra spacing after text end ---
+            cursorY += this.drawTextBox(ctx, cfg.title2, cfg.title2Size, "#fff", cfg.col2, 1800, cursorY - extraPad, 70, cfg.t2Weight, cfg.skewT2, trans, cfg.hideBoxT2, false, 1, extraPad) + 80;
+        } else if (!cfg.disableT2) cursorY += 130;
+        
+        // HTML Canvas: Dynamic position (below titles)
+        this.drawSocialCard(ctx, cfg, time, 1800, cursorY + 20);
+        
+        if(cfg.glassMode) { ctx.fillStyle = cfg.bgCol; ctx.globalAlpha = 0.5; ctx.fillRect(0,0,w,h); }
+    },
+
+    drawBG(ctx, cfg, time) {
+        let alpha = 1.0;
+        if(State.bgTransition.active) {
+            alpha = Math.min((performance.now() - State.bgTransition.start) / State.bgTransition.dur, 1);
+            this.drawSingleMedia(ctx, State.bgTransition.oldEl, State.bgTransition.oldType, State.bgTransition.oldCol, 1);
+        }
+        this.drawSingleMedia(ctx, State.media.bg.element, State.media.bg.type, cfg.bgCol, alpha);
+    },
+
+    drawSingleMedia(ctx, el, type, fallbackCol, alpha) {
+        ctx.save(); ctx.globalAlpha = alpha;
+        if(el && ((type==='video' && el.readyState >= 2) || (type==='image' && el.complete))) {
+            const w = el.videoWidth || el.width, h = el.videoHeight || el.height;
+            const s = Math.max(1920/w, 1080/h), x = (1920 - w*s)/2, y = (1080 - h*s)/2;
+            ctx.drawImage(el, x, y, w*s, h*s);
+        } else { ctx.fillStyle = fallbackCol; ctx.fillRect(0,0,1920,1080); }
+        ctx.restore();
+    },
+
+    drawGraphic(ctx, cfg, time) {
+        const breath = 1 + (Math.abs(Math.sin(time * 0.5)) * 0.03);
+        const animOffset = this.getAnimOffset(time, 0.3, 2.5);
+        
+        // Center of the "Third" Mask - Using Constant
+        const maskCenterX = SHLISH_CENTER_X; 
+        // Expanded Width to 920 to ensure Left Edge (-120) is out of frame
+        const maskW = 920; 
+        const maskH = 1080;
+
+        ctx.save(); 
+        
+        // 1. Move to mask center and animate entrance
+        const entranceX = maskCenterX + (animOffset * 10);
+        ctx.translate(entranceX, 540);
+        
+        // 2. Skew Mask only if checked
+        if(cfg.skewMask) ctx.transform(1, 0, Math.tan(-11 * Math.PI/180), 1, 0, 0);
+        
+        ctx.beginPath();
+        if(cfg.glassMode) { 
+            const r=45; 
+            ctx.roundRect(-maskW/2, -maskH/2, maskW, maskH, r); 
+        } else {
+            ctx.rect(-maskW/2, -maskH/2, maskW, maskH);
+        }
+        ctx.clip(); 
+        
+        // 3. Reset transform to draw image without skew, but relative to mask center
+        // We want the image to be drawn straight, but clipped by the skewed mask.
+        // The clip region is now active in the context.
+        // To draw unskewed image inside skewed mask, we need to undo skew for the image drawing.
+        if(cfg.skewMask) ctx.transform(1, 0, Math.tan(11 * Math.PI/180), 1, 0, 0); // Reverse skew
+
+        if(State.media.main.element) {
+            const el = State.media.main.element, ow = el.videoWidth || el.width, oh = el.videoHeight || el.height;
+            let s = Math.max(maskW/ow, maskH/oh) * 1.15; // Fill the mask area
+            if(cfg.animMain && !cfg.glassMode) s *= breath;
+            
+            ctx.save(); 
+            
+            // Apply User Transforms (Translate, Rotate, Scale)
+            // Note: Origin is currently (maskCenterX, 540) roughly.
+            ctx.translate(cfg.mainX, cfg.mainY);
+            ctx.rotate(cfg.mainRot * Math.PI / 180);
+            ctx.scale(cfg.mainScale, cfg.mainScale);
+            
+            let alpha = (!cfg.glassMode && State.anim.isPlaying) ? (time < 1.5 ? 0 : (time < 2 ? (time-1.5)/0.5 : 1)) : 1;
+            ctx.globalAlpha = alpha;
+            
+            // Draw image centered
+            ctx.drawImage(el, -ow*s/2, -oh*s/2, ow*s, oh*s);
+            
+            ctx.restore();
+        }
+        ctx.restore(); // Restore clip and transforms
+        
+        // Shine Line (if skewed)
+        if(cfg.skewMask && cfg.enableShine && (State.anim.isPlaying ? time > 2.5 : true)) {
+            // The mask right edge is roughly maskCenterX + maskW/2
+            // We need to calculate where to draw the line.
+            // X = 340 + 460 = 800. Matches previous logic.
+            const staticX = maskCenterX + (maskW/2); 
+            ctx.save(); ctx.translate(staticX + cfg.shineOffset, 540);
+            ctx.transform(1, 0, Math.tan(-11 * Math.PI/180), 1, 0, 0);
+            ctx.beginPath(); 
+            ctx.moveTo(0, -maskH/2); ctx.lineTo(0, maskH/2);
+            // Gradient Stroke
+            const grad = ctx.createLinearGradient(0, -maskH/2, 0, maskH/2);
+            grad.addColorStop(0, '#A0A0A0'); // Darker grey
+            grad.addColorStop(0.5, '#FFFFFF'); // White
+            grad.addColorStop(1, '#A0A0A0'); // Darker grey
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = cfg.shineW;
+            ctx.shadowColor = "rgba(0,0,0,0.3)";
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetX = 8;
+            ctx.stroke();
+            // Reset shadow
+            ctx.shadowColor = "transparent";
+            ctx.restore();
+        }
+    },
+
+    drawSocialCard(ctx, cfg, time, x, startY) {
+        if(cfg.hideInstBanners) return;
+
+        const cardW = 900;
+        const pad = 30;
+        const avatarSize = 80;
+        
+        // Safe access to postContent
+        const content = cfg.postContent || ""; 
+        ctx.font = `45px 'Almoni Tzar AAA', 'Almoni DL AAA', 'Assistant', 'Segoe UI', Arial, sans-serif`;
+        const lines = content.split('\n');
+        const textH = (lines.length * 55) + 20;
+        const cardH = 120 + textH + 40; 
+        
+        const startTime = 1.0;
+        const dur = 0.8;
+        let trans = !cfg.glassMode ? this.getTransform(time, startTime, dur, cfg.animType, x, startY) : {x:x, y:startY, scale:1, alpha:1};
+        
+        ctx.save();
+        
+        let dx = trans.x, dy = trans.y;
+        ctx.translate(dx, dy); 
+        ctx.scale(trans.scale, trans.scale); 
+        ctx.globalAlpha = trans.alpha;
+        ctx.translate(-dx, -dy);
+
+        const skewOffset = cfg.skewInst ? Math.tan(11 * Math.PI/180) * cardH : 0;
+        
+        ctx.beginPath();
+        ctx.moveTo(dx, dy);
+        ctx.lineTo(dx, dy + cardH);
+        ctx.lineTo(dx - cardW - skewOffset, dy + cardH);
+        ctx.lineTo(dx - cardW, dy);
+        ctx.closePath();
+        
+        ctx.fillStyle = cfg.colInst; 
+        ctx.shadowColor = "rgba(0,0,0,0.3)"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 10;
+        ctx.fill();
+        ctx.shadowColor = "transparent";
+
+        const contentRightX = dx - pad;
+        const contentTopY = dy + pad;
+
+        const avX = contentRightX - avatarSize/2;
+        const avY = contentTopY + avatarSize/2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(avX, avY, avatarSize/2, 0, Math.PI*2);
+        ctx.closePath();
+        ctx.clip();
+        
+        if(State.media.profile.element && State.media.profile.element.complete) {
+            ctx.drawImage(State.media.profile.element, avX - avatarSize/2, avY - avatarSize/2, avatarSize, avatarSize);
+        } else {
+            ctx.fillStyle = "#ccc"; ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.font = "bold 40px 'Almoni Tzar AAA', 'Almoni DL AAA', 'Assistant', Arial"; ctx.textAlign="center"; ctx.textBaseline="middle";
+            ctx.fillText(cfg.socialName ? cfg.socialName[0] : "?", avX, avY);
+        }
+        ctx.restore();
+
+        const textStartX = contentRightX - avatarSize - 20;
+        ctx.textAlign = 'right'; 
+        ctx.textBaseline = 'top';
+        
+        const isDark = this.isDarkColor(cfg.colInst);
+        ctx.fillStyle = isDark ? "#fff" : "#000";
+        
+        // Name - Bold
+        ctx.font = "bold 35px 'Almoni Tzar AAA', 'Almoni DL AAA', 'Assistant', 'Segoe UI', Arial, sans-serif";
+        ctx.fillText(cfg.socialName, textStartX, contentTopY + 5);
+
+        // Handle - Light/Regular
+        ctx.fillStyle = isDark ? "#ccc" : "#666";
+        ctx.font = "28px 'Almoni Tzar AAA', 'Almoni DL AAA', 'Assistant', 'Segoe UI', Arial, sans-serif";
+        ctx.fillText(cfg.socialHandle, textStartX, contentTopY + 45);
+
+        // --- DRAW ICON INSTEAD OF TEXT ---
+        const iconData = SocialIcons[cfg.socialPlatform];
+        const iconColor = this.getPlatformColor(cfg.socialPlatform);
+        
+        if (iconData) {
+            ctx.save();
+            // Handle Instagram gradient
+            if(cfg.socialPlatform === 'Instagram') {
+               const grad = ctx.createLinearGradient(dx - cardW + 20, contentTopY + 10 + 40, dx - cardW + 20 + 40, contentTopY + 10);
+               grad.addColorStop(0, '#f09433'); 
+               grad.addColorStop(0.25, '#e6683c'); 
+               grad.addColorStop(0.5, '#dc2743'); 
+               grad.addColorStop(0.75, '#cc2366'); 
+               grad.addColorStop(1, '#bc1888'); 
+               ctx.fillStyle = grad;
+            } else {
+               ctx.fillStyle = iconColor;
+            }
+            
+            const iconSize = 40;
+            const iconX = dx - cardW + 20;
+            const iconY = contentTopY + 10;
+            
+            ctx.translate(iconX, iconY);
+            const scale = iconSize / iconData.viewbox;
+            ctx.scale(scale, scale);
+            
+            const p = new Path2D(iconData.path);
+            ctx.fill(p);
+            ctx.restore();
+        } else {
+            ctx.font = "bold 24px 'Almoni Tzar AAA', 'Almoni DL AAA', 'Assistant', Arial, sans-serif";
+            ctx.fillStyle = iconColor;
+            ctx.textAlign = 'left';
+            ctx.fillText(cfg.socialPlatform, dx - cardW + 20, contentTopY + 10); 
+        }
+
+        ctx.fillStyle = isDark ? "#fff" : "#222";
+        // Post Content - Regular
+        ctx.font = "40px 'Almoni Tzar AAA', 'Almoni DL AAA', 'Assistant', 'Segoe UI', Arial, sans-serif";
+        ctx.textAlign = 'right';
+        const bodyY = contentTopY + 120 + 10; // Added 10px lower start
+        
+        // NEW: Sync Typing Animation to Audio Duration if available
+        let txtProgress = 1;
+        if (!cfg.glassMode) {
+             if (State.audio.duration > 0) {
+                 // Linear sync with audio: 0% at 0s, 100% at end of audio.
+                 // Clamp to 0-1 range to be safe.
+                 txtProgress = Math.max(0, Math.min(time / State.audio.duration, 1));
+             } else {
+                 // Fallback logic if no audio loaded: based on arbitrary speed
+                 const txtStart = startTime + 0.5;
+                 const txtDur = Math.max(lines.length * 0.5, 1.0); 
+                 txtProgress = time < txtStart ? 0 : Math.min((time - txtStart) / txtDur, 1);
+             }
+        }
+        
+        const totalChars = content.length; 
+        const showChars = Math.floor(totalChars * txtProgress);
+        
+        let charCount = 0;
+        lines.forEach((l, i) => {
+            let lineToShow = "";
+            if (charCount + l.length < showChars) {
+                lineToShow = l;
+            } else if (charCount < showChars) {
+                lineToShow = l.substring(0, showChars - charCount);
+            }
+            if(lineToShow) ctx.fillText(lineToShow, contentRightX, bodyY + (i * 55));
+            charCount += l.length;
+        });
+
+        ctx.restore();
+    },
+
+    isDarkColor(hex) {
+        const rgb = parseInt(hex.slice(1), 16); 
+        const r = (rgb >> 16) & 0xff, g = (rgb >>  8) & 0xff, b = (rgb >>  0) & 0xff;
+        return (r * 0.299 + g * 0.587 + b * 0.114) < 186;
+    },
+    
+    getPlatformColor(p) {
+        if(p === 'Twitter') return '#1DA1F2';
+        if(p === 'Facebook') return '#1877F2';
+        if(p === 'Instagram') return '#C13584';
+        if(p === 'LinkedIn') return '#0A66C2';
+        if(p === 'WhatsApp') return '#25D366';
+        return '#888';
+    },
+
+    // Modified to support extra vertical padding and Font Weight
+    drawTextBox(ctx, text, fontSize, color, bgColor, x, y, padX, weight, skew, trans, hideBox, bullet, progress = 1, extraPadY = 0) {
+        if(!text) return 0;
+        const lineHeight = fontSize * 1.2; 
+        
+        // Use weight + Almoni
+        ctx.font = `${weight} ${fontSize}px 'Almoni Tzar AAA', 'Almoni DL AAA', 'Assistant', 'Segoe UI', Arial, sans-serif`;
+        
+        const lines = text.split('\n');
+        let maxW = 0; lines.forEach(l => maxW = Math.max(maxW, ctx.measureText(l).width));
+        // Add extraPadY to the base padding
+        const padY = 10 + extraPadY; 
+        const bulletSpace = 0;
+        const boxH = (lines.length * lineHeight) + (padY*2), boxW = maxW + (padX*2) + bulletSpace;
+        
+        ctx.save();
+        let dx = trans ? trans.x : x, dy = trans ? trans.y : y, scale = trans ? trans.scale : 1, alpha = trans ? trans.alpha : 1;
+        ctx.translate(x, y); ctx.scale(scale, scale); ctx.globalAlpha = alpha; ctx.translate(-x, -y);
+        const skewOffset = skew ? Math.tan(11 * Math.PI/180) * boxH : 0;
+        
+        if(!hideBox) {
+            ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(dx, dy + boxH);
+            ctx.lineTo(dx - boxW - skewOffset, dy + boxH); ctx.lineTo(dx - boxW, dy);
+            ctx.closePath(); ctx.fillStyle = bgColor; ctx.fill();
+        }
+        
+        ctx.fillStyle = color; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+        lines.forEach((l, i) => { ctx.fillText(l.substring(0, Math.floor(l.length * progress)), dx - padX - bulletSpace, dy + padY + (i*lineHeight)); });
+        ctx.restore(); return boxH;
+    },
+
+    getTransform(t, start, dur, type, x, y) {
+        if(t < start) return {x, y, scale:0, alpha:0};
+        let p = (t - start)/dur; if(p > 1) p = 1; const ease = 1 - Math.pow(1 - p, 3);
+        if(type === 'scale') return {x, y, scale: ease, alpha: 1};
+        if(type === 'fade') return {x, y, scale: 1, alpha: ease};
+        return {x: x + (150 * (1-ease)), y, scale: 1, alpha: 1};
+    },
+    getAnimOffset(t, start, dur) { return t < start ? 150 : (t > start+dur ? 0 : 150 * (1 - (1 - Math.pow(1 - (t-start)/dur, 3)))); }
+};
+
+// --- GENERATORS (AE Script & Templates) ---
+const Generators = {
+    loadReporter(file) {
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            const txt = e.target.result;
+            // Robust Regex for Key-Value matching, including multiline values until next key
+            // Looks for Key followed by : or = then captures everything until next Key:
+            const getVal = (k) => { 
+                // Allow any characters (non-greedy) between the key and the separator to handle "(...)" notes
+                const regex = new RegExp(k + "[^:=]*[:=]\\s*([\\s\\S]*?)(?=$|\\r?\\n\\s*[\\u0590-\\u05FF\\w\\s]+[^:=]*[:=])", "i");
+                const m = txt.match(regex);
+                return (m && m[1]) ? m[1].trim() : ""; 
+            };
+            
+            const setVal = (id, v) => { if(v && UI.els[id]) UI.els[id].value = v; };
+            
+            // Standard Fields
+            setVal('title1', getVal("כותרת ראשית")); 
+            setVal('title2', getVal("כותרת משנה"));
+            // Social Text often contains Name/Handle/Platform in the new format? 
+            // The prompt says "טקסט סושיאל" maps to the content.
+            // But if the file has "שם תצוגה", "שם משתמש" etc (which I added to the output), we should load them.
+            setVal('socialName', getVal("שם תצוגה"));
+            setVal('socialHandle', getVal("שם משתמש"));
+            
+            // Audio Path
+            const audioPath = getVal("קישור קובץ אודיו");
+            if (audioPath) {
+                // If it's empty in TXT or "לא נבחר", fallback to default, else set it.
+                if (!audioPath.includes("לא נבחר") && audioPath.trim() !== "") {
+                     UI.els.audioPathUrl.value = audioPath;
+                }
+            }
+
+            // Social Platform - Clean it
+            let platformVal = getVal("פלטפורמה");
+            if (platformVal) {
+                // Remove numbering like "1. " or "5. " if present in user selection
+                platformVal = platformVal.replace(/^\d+\.\s*/, '').trim();
+                // Map partial matches if needed, otherwise exact match
+                const options = Array.from(UI.els.socialPlatform.options).map(o => o.value);
+                // Simple fuzzy matching
+                const matched = options.find(opt => platformVal.toLowerCase().includes(opt.toLowerCase().split(' ')[0]));
+                if(matched) UI.els.socialPlatform.value = matched;
+            }
+
+            setVal('quoteInput', getVal("טקסט סושיאל") || getVal("תוכן הפוסט")); // Fallback
+
+            // Parse Edition Name
+            let edition = getVal("שם המהדורה");
+            if (!edition) edition = getVal("מהדורה");
+            if (edition) {
+                document.getElementById('editionName').innerText = edition;
+                // Auto-load background based on edition name from the gallery
+                const matchedBg = BG_GALLERY_ITEMS.find(item => edition.includes(item.name) || item.name.includes(edition));
+                if (matchedBg) {
+                    // Play preview
+                    UI.handleMedia('bg', { url: matchedBg.url, name: matchedBg.name, type: 'video' });
+                    
+                    // Set hidden filename for AE
+                    UI.els.mediaBgFileName.value = matchedBg.fileName;
+                    
+                    // Set visible URL input to Local Path (for user reference)
+                    const folder = UI.els.mediaFolderPath.value;
+                    const sep = folder.includes('/') ? '/' : '\\'; 
+                    const cleanFolder = folder.endsWith(sep) ? folder : folder + sep;
+                    UI.els.mediaBgUrl.value = cleanFolder + matchedBg.fileName;
+
+                    // Apply Theme and Titles
+                    UI.applyTheme(matchedBg);
+                }
+            }
+
+            // --- Media Paths from TXT ---
+            // New Format keys: "קישור תמונה ראשית", "קישור תמונת רקע"
+            const mainPath = getVal("קישור תמונה ראשית") || getVal("תמונת שליש");
+            if (mainPath && !mainPath.includes("לא נבחר")) {
+                UI.els.mediaMainFileName.value = mainPath; 
+                UI.els.mediaMainUrl.value = mainPath; // Show full path in HTML UI as requested
+                
+                // If the rawMain starts with http (it might be a web link), load preview.
+                if (mainPath.startsWith('http')) {
+                     UI.handleMedia('main', { url: mainPath, name: "From TXT", type: 'image' });
+                }
+            }
+
+            // 2. Background Video - Logic from TXT
+            // Note: The prompt asked to remove "Background Link" from TXT, but we still parse it if present for backward compatibility.
+            // The main logic for BG is now via Edition Name above.
+            const rawBg = getVal("קישור תמונת רקע") || getVal("וידאו רקע");
+            let bgFile = null;
+            
+            // Fixed base paths (matching downloadTemplate)
+            // Using standard strings with escaped backslashes
+            const shlishBase = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\SHLISH\\";
+            const socialBase = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\SOCIAL\\";
+            const bgBase = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\";
+
+            // Helper to clean path
+            const cleanPath = (p, prefix) => {
+                if(!p || p.includes("לא נבחר")) return null;
+                // Normalize slashes for comparison
+                const normP = p.replace(/\//g, '\\').toLowerCase();
+                const normPrefix = prefix.replace(/\//g, '\\').toLowerCase();
+                
+                if(normP.startsWith(normPrefix)) {
+                    // Return the suffix (filename)
+                    return p.substring(prefix.length).trim();
+                }
+                // Try also strict filename if path didn't match prefix
+                if (p.includes('\\') || p.includes('/')) {
+                     return p.split(/[/\\]/).pop();
+                }
+                return p.trim(); // Fallback
+            };
+
+            if(rawBg && !rawBg.includes("לא נבחר")) {
+                 if(cleanPath(rawBg, bgBase) !== rawBg) {
+                      bgFile = cleanPath(rawBg, bgBase);
+                 } else {
+                      bgFile = rawBg.split(/[/\\]/).pop();
+                 }
+            }
+
+            if (bgFile) {
+                UI.els.mediaBgFileName.value = bgFile;
+                UI.els.mediaBgUrl.value = rawBg; // Show full path in HTML UI
+                
+                if (rawBg.startsWith('http')) {
+                     UI.handleMedia('bg', { url: rawBg, name: "From TXT", type: 'video' });
+                } else {
+                    const matchedItem = BG_GALLERY_ITEMS.find(item => bgFile.includes(item.name) || item.name.includes(bgFile));
+                    if(matchedItem) {
+                         // Found in gallery - load preview
+                         UI.handleMedia('bg', { url: matchedItem.url, name: matchedItem.name, type: 'video' });
+                         
+                         // Force the input to show the TXT path (local)
+                         UI.els.mediaBgUrl.value = rawBg; 
+                         UI.els.mediaBgFileName.value = matchedItem.fileName; 
+                         
+                         // Apply Theme here too if found
+                         UI.applyTheme(matchedItem);
+                    } else {
+                        UI.els.mediaBgUrl.value = rawBg; 
+                    }
+                }
+            }
+
+            // 3. Profile Image
+            const rawProfile = getVal("קישור תמונת פרופיל") || getVal("תמונת פרופיל");
+            const profileFile = cleanPath(rawProfile, socialBase);
+            
+            if(profileFile) {
+                // Show full path in input instead of just filename
+                if (rawProfile && !rawProfile.includes("לא נבחר")) {
+                     UI.els.profileFileName.value = rawProfile;
+                } else {
+                    // Reconstruct path if we just extracted filename
+                     UI.els.profileFileName.value = socialBase + profileFile;
+                }
+
+                if (rawProfile && rawProfile.startsWith('http')) {
+                     UI.handleMedia('profile', { url: rawProfile, name: "From TXT", type: 'image' });
+                }
+            }
+
+            // Update Design Settings from TXT
+            const glassVal = getVal("מצב קיר זכוכית");
+            if (glassVal && glassVal.includes('כן')) {
+                UI.els.glassMode.checked = true;
+                UI.els.btnGlassMode.classList.add('active');
+            } else if (glassVal && glassVal.includes('לא')) {
+                UI.els.glassMode.checked = false;
+                UI.els.btnGlassMode.classList.remove('active');
+            }
+
+            const animVal = getVal("אנימציית ציטוט"); 
+            if (animVal) {
+                if (animVal.toLowerCase().includes('slide')) UI.els.animType.value = 'slide';
+                if (animVal.toLowerCase().includes('scale')) UI.els.animType.value = 'scale';
+                if (animVal.toLowerCase().includes('fade')) UI.els.animType.value = 'fade';
+            }
+
+            CanvasRenderer.draw(true);
+        };
+        reader.readAsText(file);
+    },
+
+    async transcribe() {
+        const elStat = UI.els.transcribeStatus;
+        if(!State.apiKey || !UI.els.audioFileInput.files[0]) return alert("Missing Key or File");
+        elStat.innerText = "מעבד...";
+        try {
+            const file = UI.els.audioFileInput.files[0];
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                const b64 = reader.result.split(',')[1];
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${State.apiKey}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contents: [{parts:[{text: "חלץ את הטקסט מהאודיו."}, {inlineData: {mimeType: file.type, data: b64}}]}] })
+                });
+                const data = await res.json();
+                const text = data.candidates[0].content.parts[0].text;
+                if(UI.els.quoteInput) UI.els.quoteInput.value = text;
+                
+                // NEW: Set duration mode to Audio (0)
+                UI.els.durationMode.value = '0';
+                UI.els.durationMode.dispatchEvent(new Event('change'));
+                
+                elStat.innerText = "בוצע!"; CanvasRenderer.draw(true);
+            }
+        } catch(e) { elStat.innerText = "שגיאה"; alert(e); }
+    },
+
+    downloadTemplate() {
+        const cfg = UI.getConfig();
+        // Fixed Paths using standard strings with escaped backslashes
+        const shlishBase = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\SHLISH\\";
+        const socialBase = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\SOCIAL\\";
+        
+        // Removed bgBase/bgTxt as per request
+
+        // Determine Filenames
+        // Main
+        let mainTxt = shlishBase + "[שם קובץ]";
+        if (UI.els.mediaMainFileName.value && UI.els.mediaMainFileName.value !== "לא נבחר") {
+             // If user picked a file, check if it's full path or just name
+             if(UI.els.mediaMainFileName.value.includes('\\')) mainTxt = UI.els.mediaMainFileName.value;
+             else mainTxt = shlishBase + UI.els.mediaMainFileName.value;
+        } else if (UI.els.mediaMainUrl.value && UI.els.mediaMainUrl.value.includes("SHLISH")) {
+             // If user manually typed/pasted into URL box
+             mainTxt = UI.els.mediaMainUrl.value;
+        }
+
+        // Profile
+        let profileTxt = socialBase + "[שם קובץ]";
+        if(UI.els.profileFileName.value && UI.els.profileFileName.value !== "לא נבחר") {
+            if(UI.els.profileFileName.value.includes('\\')) profileTxt = UI.els.profileFileName.value;
+            else profileTxt = UI.els.profileFileName.value; // It likely already has the path if it wasn't empty
+        }
+
+        const glassTxt = cfg.glassMode ? "כן" : "לא";
+        const audioX = State.audio.url ? "[X]" : "[ ]";
+        const imgX = (UI.els.mediaMainFileName.value) ? "[X]" : "[ ]";
+        const vidX = (UI.els.mediaBgFileName.value) ? "[X]" : "[ ]"; 
+        
+        // Audio Path Line
+        const audioPathLine = UI.els.audioPathUrl.value ? UI.els.audioPathUrl.value : "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\AUDIO\\";
+
+        const content = `----------------------------------------
+פרטי הזמנה:
+שם השולח/כתב: [לא מולא]
+שם המהדורה:  ${document.getElementById('editionName').innerText}
+תאריך שידור: ${new Date().toLocaleDateString('he-IL')}
+שעת שידור משוערת:  
+----------------------------------------
+מצב קיר זכוכית: ${glassTxt}
+ 
+----------------------------------------
+אנימציית ציטוט (מחק את המיותר):
+1. Slide
+2. Scale
+3. Fade
+----------------------------------------
+פלטפורמה (מחק את המיותר):
+1. Twitter / X
+2. Facebook
+3. Instagram
+4. LinkedIn
+5. WhatsApp
+----------------------------------------
+קבצים מצורפים (סמן ב-X אם רלוונטי):
+${audioX} קובץ אודיו (קריינות לגרפיקה)
+${imgX} תמונה (רקע או אילוסטרציה)
+${vidX} קובץ וידאו
+
+קישור תמונה ראשית: ${mainTxt}
+קישור תמונת פרופיל: ${profileTxt}
+קישור קובץ אודיו: ${audioPathLine}
+----------------------------------------
+תוכן הגרפיקה (נא למלא במדויק):
+
+כותרת ראשית:
+${cfg.title1}
+
+כותרת משנה:
+${cfg.title2}
+
+שם תצוגה:
+${cfg.socialName}
+
+שם משתמש:
+${cfg.socialHandle}
+
+טקסט סושיאל:
+${cfg.postContent}`;
+        
+        const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
+        const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = "SOCIAL_FORM.txt"; link.click();
+    },
+
+    downloadAE() {
+        let cfg = State.config;
+        if (!cfg) { cfg = UI.getConfig(); State.config = cfg; }
+        
+        let audioDur = 10; // Default
+        if (cfg.durationMode == 1) audioDur = 30; else if (cfg.durationMode == 2) audioDur = 45; else if (cfg.durationMode == 3) audioDur = 90;
+        else if (cfg.durationMode == 0 && State.audio.duration > 0) audioDur = Math.ceil(State.audio.duration);
+
+        // --- NEW LOGIC FOR FULL PATHS ---
+        const shlishFolder = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\SHLISH\\";
+        const socialFolder = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\SOCIAL\\";
+
+        // Main Image Path Logic
+        let mainAbsPath = "";
+        let mainInput = UI.els.mediaMainFileName.value;
+        let mainUrlInput = UI.els.mediaMainUrl.value;
+        
+        if (mainInput && mainInput !== "לא נבחר") {
+             // If user selected file or reporter loaded it
+             if (mainInput.includes(":") || mainInput.startsWith("/")) mainAbsPath = mainInput; // Already absolute
+             else mainAbsPath = shlishFolder + mainInput; // Append folder
+        } else if (mainUrlInput && mainUrlInput.toLowerCase().match(/\.(jpg|jpeg|png|mp4|mov)$/)) {
+             // Fallback to URL input if it looks like a file path
+             if (mainUrlInput.includes(":") || mainUrlInput.startsWith("/")) mainAbsPath = mainUrlInput;
+             else mainAbsPath = shlishFolder + mainUrlInput;
+        }
+
+        // Profile Image Path Logic
+        let profileAbsPath = "";
+        let profileInput = UI.els.profileFileName.value; 
+        
+        // Ensure input is not just the default folder or empty
+        if (profileInput && profileInput !== "לא נבחר" && !profileInput.endsWith("\\") && !profileInput.endsWith("/")) {
+             if (profileInput.includes(":") || profileInput.startsWith("/")) profileAbsPath = profileInput;
+             else profileAbsPath = socialFolder + profileInput;
+        }
+
+        const aeData = {
+            title1: cfg.title1, title2: cfg.title2,
+            social: {
+                name: cfg.socialName, handle: cfg.socialHandle, platform: cfg.socialPlatform, content: cfg.postContent,
+                profileName: UI.els.profileFileName.value || UI.els.btnProfilePic.innerText
+            },
+            colors: { bg: cfg.bgCol, t1: cfg.col1, t2: cfg.col2, card: cfg.colInst },
+            config: {
+                glass: cfg.glassMode, skewMask: cfg.skewMask, shine: cfg.enableShine, 
+                shineW: cfg.shineW, shineOff: cfg.shineOffset,
+                align: cfg.imgAlign, anim: cfg.animType,
+                disclaimer: cfg.disclaimer, disableGraphic: cfg.disableGraphic,
+                invertColors: cfg.invertColors, disableT2: cfg.disableT2,
+                hideInstBanners: cfg.hideInstBanners, hideBoxT1: cfg.hideBoxT1, hideBoxT2: cfg.hideBoxT2,
+                animMain: cfg.animMain, skewT1: cfg.skewT1, skewT2: cfg.skewT2, skewInst: cfg.skewInst,
+                title1Size: cfg.title1Size,
+                title2Size: cfg.title2Size,
+                // Image Adjustments
+                mainScale: cfg.mainScale, mainX: cfg.mainX, mainY: cfg.mainY, mainRot: cfg.mainRot,
+                // Weights
+                t1Weight: cfg.t1Weight, t2Weight: cfg.t2Weight
+            },
+            // Pass the calculated absolute paths
+            media: { 
+                folder: UI.els.mediaFolderPath.value, 
+                mainPath: mainAbsPath, // New specific path
+                profilePath: profileAbsPath, // New specific path
+                bg: UI.els.mediaBgFileName.value,
+                audioPath: UI.els.audioPathUrl.value 
+            },
+            hasAudio: !!State.audio.url, 
+            calcDur: audioDur,
+            // Pass duration mode specifically to check if we are in "Audio" mode
+            durationMode: cfg.durationMode 
+        };
+
+        const script = `
+        (function() {
+            var data = ${JSON.stringify(aeData)};
+            var appID = "v_SOCIAL_FINAL";
+            
+            // ADD 5 SECONDS TAIL IF AUDIO MODE
+            if (data.durationMode == '0' && data.hasAudio) {
+                data.calcDur += 5; 
+            }
+
+            // --- Helpers ---
+            function hexToRgb(hex){var c=hex.replace('#','');if(c.length!==6)return[1,0,0.5];var r=parseInt(c.substring(0,2),16)/255,g=parseInt(c.substring(2,4),16)/255,b=parseInt(c.substring(4,6),16)/255;return[r,g,b];}
+            function getOrCreatePreComp(proj,name,w,h,col,dur){var c=null;for(var i=1;i<=proj.numItems;i++){if(proj.item(i) instanceof CompItem && proj.item(i).name===name){c=proj.item(i);break;}}if(!c){c=proj.items.addComp(name,w,h,1,dur,24);c.layers.addSolid(col,"Placeholder",w,h,1,dur);}else{if(c.duration<dur)c.duration=dur;}return c;}
+            function findLayer(c,n){for(var i=1;i<=c.numLayers;i++)if(c.layer(i).name===n)return c.layer(i);return null;}
+            function updateLayerPosition(layer, newPos) { var prop = layer.property("Position"); while (prop.numKeys > 0) prop.removeKey(1); prop.setValue(newPos); }
+            
+            // --- UPDATED FONT MAPPER (ENFORCE ALMONI TZAR AAA) ---
+            function getAlmoniFont(w) {
+                var weight = w ? w.toString().toLowerCase() : 'bold';
+                
+                // Explicit Weights (Numeric)
+                if(weight === '900') return "AlmoniTzarAAA-Black";
+                if(weight === '800') return "AlmoniTzarAAA-Black"; // Fallback to Black
+                if(weight === '700') return "AlmoniTzarAAA-Bold";
+                if(weight === '600') return "AlmoniTzarAAA-Bold"; 
+                if(weight === '300') return "AlmoniTzarAAA-Light";
+                
+                // Explicit Weights (Names)
+                if(weight === 'black') return "AlmoniTzarAAA-Black";
+                if(weight === 'extrabold') return "AlmoniTzarAAA-Black";
+                if(weight === 'bold') return "AlmoniTzarAAA-Bold";
+                if(weight === 'semibold') return "AlmoniTzarAAA-Bold"; 
+                if(weight === 'light') return "AlmoniTzarAAA-Light";
+                if(weight === 'regular' || weight === 'normal') return "AlmoniTzarAAA-Regular";
+                
+                return "AlmoniTzarAAA-Bold"; // Default fallback
+            }
+
+            function addEntranceAnimation(layer, delay, type, duration, distance) {
+               var pos = layer.property("Position"); var scale = layer.property("Scale"); var opacity = layer.property("Opacity");
+               while (pos.numKeys > 0) pos.removeKey(1); while (scale.numKeys > 0) scale.removeKey(1); while (opacity.numKeys > 0) opacity.removeKey(1);
+               opacity.setValue(100); scale.setValue([100,100]);
+               var kf1 = delay, kf2 = delay + (duration || 0.8);
+               var ease = new KeyframeEase(0.6, 75);
+               if (type === 'scale') {
+                   scale.setValueAtTime(kf1, [0, 0]); scale.setValueAtTime(kf2, [100, 100]);
+                   scale.setTemporalEaseAtKey(1, [ease, ease, ease]); scale.setTemporalEaseAtKey(2, [ease, ease, ease]);
+               } else if (type === 'fade') {
+                   opacity.setValueAtTime(kf1, 0); opacity.setValueAtTime(kf2, 100);
+                   opacity.setTemporalEaseAtKey(1, [ease]); opacity.setTemporalEaseAtKey(2, [ease]);
+               } else { // Slide
+                   var dist = distance || 150; var cp = pos.value;
+                   pos.setValueAtTime(kf1, [cp[0]+dist, cp[1]]); pos.setValueAtTime(kf2, cp);
+                   opacity.setValueAtTime(kf1, 0); opacity.setValueAtTime(kf2, 100);
+                   pos.setTemporalEaseAtKey(1, [ease]); pos.setTemporalEaseAtKey(2, [ease]);
+               }
+            }
+
+            function updateOrCreateTrapezoid(comp, name, color, x, y, w, h, skew) {
+                var layer = findLayer(comp, name);
+                if(!layer) { layer = comp.layers.addShape(); layer.name = name; 
+                    var sg = layer.property("Contents").addProperty("ADBE Vector Group");
+                    sg.property("Contents").addProperty("ADBE Vector Shape - Group");
+                    sg.property("Contents").addProperty("ADBE Vector Graphic - Fill");
+                }
+                var shape = layer.property("Contents").property(1).property("Contents").property(1).property("Path").value;
+                var sk = skew ? Math.tan(11 * Math.PI/180) * h : 0;
+                shape.vertices = [[0,0], [0,h], [-w-sk, h], [-w, 0]]; shape.closed = true;
+                layer.property("Contents").property(1).property("Contents").property(1).property("Path").setValue(shape);
+                layer.property("Contents").property(1).property("Contents").property(2).property("Color").setValue(color);
+                updateLayerPosition(layer, [x, y]);
+                return layer;
+            }
+
+            function updateOrCreateText(comp, name, text, color, size, fontNameOrWeight, align) {
+                var layer = findLayer(comp, name);
+                if(!layer) { layer = comp.layers.addText(text); layer.name = name; }
+                
+                // Determine font name: check if it's already a full PostScript name, otherwise resolve weight
+                var finalFont = fontNameOrWeight;
+                if (!finalFont || finalFont.indexOf('AlmoniTzarAAA') === -1) {
+                    finalFont = getAlmoniFont(fontNameOrWeight);
+                }
+                
+                var doc = layer.property("Source Text").value;
+                doc.text = text; doc.fillColor = color; doc.fontSize = size; 
+                doc.font = finalFont; // Apply resolved Almoni font
+                
+                if (align === 'left') {
+                    doc.justification = ParagraphJustification.LEFT_JUSTIFY;
+                } else {
+                    doc.justification = ParagraphJustification.RIGHT_JUSTIFY;
+                }
+                doc.leading = size*1.2;
+                layer.property("Source Text").setValue(doc);
+                return layer;
+            }
+
+            function createShineLayer(comp, col, w, off, skew) {
+                var layer = findLayer(comp, "Shine Line"); if(layer) layer.remove();
+                layer = comp.layers.addShape(); layer.name = "Shine Line";
+                var sg = layer.property("Contents").addProperty("ADBE Vector Group");
+                var path = sg.property("Contents").addProperty("ADBE Vector Shape - Group").property("Path").value;
+                path.vertices = [[0, -750], [0, 750]]; path.closed = false;
+                sg.property("Contents").property(1).property("Path").setValue(path);
+                
+                var str = sg.property("Contents").addProperty("ADBE Vector Graphic - Stroke");
+                str.property("Color").setValue([1,1,1]); 
+                str.property("Stroke Width").setValue(13);
+                
+                layer.position.setValue([800 + off, 540]);
+                layer.rotation.setValue(skew ? 11 : 0);
+
+                var ramp = layer.property("Effects").addProperty("ADBE Ramp");
+                ramp.property("Start of Ramp").setValue([0, 0]);
+                ramp.property("End of Ramp").setValue([0, 1080]);
+                ramp.property("Start Color").setValue([0.75, 0.75, 0.75]); 
+                ramp.property("End Color").setValue([1, 1, 1]); 
+                ramp.property("Ramp Shape").setValue(1); 
+
+                var shadow = layer.property("Effects").addProperty("ADBE Drop Shadow");
+                shadow.property("Direction").setValue(90); 
+                shadow.property("Distance").setValue(5);
+                shadow.property("Softness").setValue(10);
+                shadow.property("Opacity").setValue(128); 
+
+                return layer;
+            }
+
+            function addRoundedMatte(comp, targetLayer, roundness) {
+                if(!targetLayer) return;
+                var matteName = targetLayer.name + " Matte";
+                var matte = findLayer(comp, matteName);
+                if(matte) matte.remove();
+                matte = comp.layers.addShape(); 
+                matte.name = matteName;
+                var sg = matte.property("Contents").addProperty("ADBE Vector Group");
+                var rect = sg.property("Contents").addProperty("ADBE Vector Shape - Rect");
+                rect.property("Size").setValue([1920, 1080]);
+                rect.property("Roundness").setValue(roundness);
+                var fill = sg.property("Contents").addProperty("ADBE Vector Graphic - Fill");
+                fill.property("Color").setValue([1,1,1]);
+                matte.position.setValue([960, 540]);
+                matte.moveBefore(targetLayer);
+                targetLayer.setTrackMatte(matte, TrackMatteType.ALPHA);
+            }
+
+            function importMediaFromDialog(targetCompName, alignMode, folderPath, fileName, specificUrl) {
+                var targetComp = getOrCreatePreComp(app.project, targetCompName, 1920, 1080, [0.5,0.5,0.5], 30);
+                if (!targetComp) return null;
+                var importedItem = null;
+                
+                // Priority 1: Specific Absolute URL/Path passed from UI
+                if (specificUrl && specificUrl.length > 3) { // Simple check for non-empty path
+                    var f = new File(specificUrl);
+                    if (f.exists) {
+                        try { importedItem = app.project.importFile(new ImportOptions(f)); } catch(e){}
+                    }
+                }
+
+                // Priority 2: fileName as absolute path
+                if (!importedItem && fileName && File(fileName).exists) {
+                      importedItem = app.project.importFile(new ImportOptions(File(fileName)));
+                } 
+                
+                // Priority 3: folder + fileName
+                else if (!importedItem && folderPath && fileName) {
+                    var f = new File(folderPath + "/" + fileName);
+                    if (f.exists) { try { var importOptions = new ImportOptions(f); importedItem = app.project.importFile(importOptions); } catch(e) { } }
+                }
+                
+                // If still not found, open dialog
+                if (!importedItem) {
+                    var file = File.openDialog("Select Media for " + targetCompName);
+                    if (file) { try { var importOptions = new ImportOptions(file); importedItem = app.project.importFile(importOptions); } catch(e) { } }
+                }
+                
+                if (importedItem) {
+                    while(targetComp.numLayers > 0) { targetComp.layer(1).remove(); }
+                    var layer = targetComp.layers.add(importedItem);
+                    if (layer.source.duration > 0) {
+                        layer.stretch = (targetComp.duration / layer.source.duration) * 100;
+                    }
+                    layer.outPoint = targetComp.duration;
+                    var compW = targetComp.width; var compH = targetComp.height;
+                    var s = Math.max(compW / layer.width, compH / layer.height) * 100;
+                    s = s * 1.15;
+                    var finalX = compW/2; var finalY = compH/2;
+                    if (alignMode === 'left') { finalX = compW * 0.22; }
+                    
+                    // SYNCED TRANSFORM LOGIC
+                    if (targetCompName === "PLACE IMAGE HERE") {
+                        var targetW = 920; 
+                        var s = Math.max(targetW / layer.width, 1080 / layer.height) * 100;
+                        s = s * 1.15; 
+                        var baseX = 340; 
+                        var baseY = 540;
+                        var userScale = data.config.mainScale || 1;
+                        layer.scale.setValue([s * userScale, s * userScale]);
+                        var offX = data.config.mainX || 0;
+                        var offY = data.config.mainY || 0;
+                        layer.position.setValue([baseX + offX, baseY + offY]);
+                        var rot = data.config.mainRot || 0;
+                        layer.rotation.setValue(rot);
+                    } else {
+                        layer.scale.setValue([s, s]);
+                        layer.position.setValue([finalX, finalY]);
+                    }
+                }
+            }
+
+            function importAudioFromDialog(targetCompName, audioPath) {
+                var targetComp = getOrCreatePreComp(app.project, targetCompName, 1920, 1080, [0.5,0.5,0.5], 30);
+                var importedItem = null;
+                
+                if (audioPath && File(audioPath).exists) {
+                    try { importedItem = app.project.importFile(new ImportOptions(File(audioPath))); } catch(e){}
+                }
+                
+                if (!importedItem) {
+                      var file = File.openDialog("Select Audio");
+                      if(file) {
+                        var io = new ImportOptions(file);
+                        importedItem = app.project.importFile(io);
+                      }
+                }
+                
+                if (importedItem) {
+                    while(targetComp.numLayers > 0) targetComp.layer(1).remove();
+                    targetComp.layers.add(importedItem);
+                }
+            }
+
+            function createSocialCardComp(parentComp) {
+                var scComp = getOrCreatePreComp(app.project, "Social Card Comp", 900, 600, [0,0,0], data.calcDur);
+                while(scComp.numLayers > 0) scComp.layer(1).remove();
+                
+                var content = data.social.content || "";
+                var lines = content.split('\\n');
+                var textH = (lines.length * 48) + 20; 
+                var cardH = 160 + textH + 40; 
+                var cardW = 900;
+
+                var layer = scComp.layers.addShape(); layer.name = "Card Base";
+                var sg = layer.property("Contents").addProperty("ADBE Vector Group");
+                sg.property("Contents").addProperty("ADBE Vector Shape - Group");
+                sg.property("Contents").addProperty("ADBE Vector Graphic - Fill");
+                var shape = layer.property("Contents").property(1).property("Contents").property(1).property("Path").value;
+                var sk = data.config.skewInst ? Math.tan(11 * Math.PI/180) * cardH : 0;
+                shape.vertices = [[cardW + sk, 0], [cardW, cardH], [0, cardH], [sk, 0]]; 
+                shape.closed = true;
+                layer.property("Contents").property(1).property("Contents").property(1).property("Path").setValue(shape);
+                layer.property("Contents").property(1).property("Contents").property(2).property("Color").setValue(hexToRgb(data.colors.card));
+                layer.position.setValue([0,0]); 
+                layer.anchorPoint.setValue([0,0]);
+
+                var pSize = 100;
+                var ppCompName = "PROFILE PIC HERE";
+                var ppComp = getOrCreatePreComp(app.project, ppCompName, 1080, 1080, [0.8,0.8,0.8], data.calcDur);
+                while(ppComp.numLayers > 0) ppComp.layer(1).remove();
+
+                var pItem = null;
+                // USE PASSED PROFILE PATH FIRST
+                if (data.media.profilePath && File(data.media.profilePath).exists) {
+                      try { pItem = app.project.importFile(new ImportOptions(File(data.media.profilePath))); } catch(e){}
+                } 
+                // FALLBACKS
+                else if (data.social.profileName && File(data.social.profileName).exists) {
+                      pItem = app.project.importFile(new ImportOptions(File(data.social.profileName)));
+                }
+
+                if(pItem) {
+                        var imgL = ppComp.layers.add(pItem);
+                        var s = Math.max(1080/imgL.width, 1080/imgL.height) * 100;
+                        imgL.scale.setValue([s,s]);
+                        imgL.position.setValue([540, 540]); 
+                } else {
+                        var txt = ppComp.layers.addText(data.social.name ? data.social.name[0] : "?");
+                        var tp = txt.property("Source Text");
+                        var tDoc = tp.value;
+                        tDoc.fontSize = 600; tDoc.font = "AlmoniTzarAAA-Bold"; tDoc.fillColor = [0.2,0.2,0.2]; tDoc.justification = ParagraphJustification.CENTER_JUSTIFY;
+                        tp.setValue(tDoc);
+                        txt.position.setValue([540, 800]); 
+                        var bg = ppComp.layers.addSolid([0.9,0.9,0.9], "BG", 1080, 1080, 1, data.calcDur);
+                        bg.moveToEnd();
+                }
+
+                var pl = scComp.layers.add(ppComp); 
+                pl.name = "Profile Pic Comp";
+                var finalScale = (pSize / 1080) * 100;
+                pl.scale.setValue([finalScale, finalScale]);
+                pl.position.setValue([cardW - 60, 60]);
+
+                var m = pl.Masks.addProperty("ADBE Mask Atom");
+                var mat = scComp.layers.addShape(); mat.name = "Profile Matte";
+                var mg = mat.property("Contents").addProperty("ADBE Vector Group");
+                var me = mg.property("Contents").addProperty("ADBE Vector Shape - Ellipse");
+                me.property("Size").setValue([pSize, pSize]);
+                mg.property("Contents").addProperty("ADBE Vector Graphic - Fill").property("Color").setValue([1,1,1]);
+                mat.position.setValue([cardW - 60, 60]);
+                mat.moveBefore(pl);
+                pl.setTrackMatte(mat, TrackMatteType.ALPHA);
+
+                var nameL = updateOrCreateText(scComp, "Name", data.social.name, [0,0,0], 35, "AlmoniTzarAAA-Bold", "right");
+                updateLayerPosition(nameL, [cardW - 130, 45]); 
+
+                var handL = updateOrCreateText(scComp, "Handle", data.social.handle, [0.4,0.4,0.4], 28, "AlmoniTzarAAA-Light", "right");
+                updateLayerPosition(handL, [cardW - 130, 85]);
+
+                var platL = updateOrCreateText(scComp, "Platform", data.social.platform, [0.2,0.6,1], 24, "AlmoniTzarAAA-Bold", "left");
+                updateLayerPosition(platL, [30 + sk, 45]); 
+
+                var postL = updateOrCreateText(scComp, "Post", data.social.content, [0.1,0.1,0.1], 35, "AlmoniTzarAAA-Regular", "right"); // Updated font size to 35 as requested
+                
+                // LOWERED SOCIAL TEXT START Y BY 20PX MORE (40 total from 160)
+                var textStartY = 160 + 40; 
+                updateLayerPosition(postL, [cardW - 30, textStartY]);
+                
+                // --- TYPEWRITER ANIMATION LOGIC (WITH AUDIO) ---
+                var typeStart = 1.5;
+                // Check specifically if durationMode is '0' which means "Audio Based" 
+                // AND if an audio path exists.
+                var isAudioMode = (data.durationMode == '0' && data.media.audioPath && data.media.audioPath.length > 3);
+                
+                if (isAudioMode) {
+                    // "Accelerate by 2x" -> Duration is calcDur / 2.
+                    var availableTime = (data.calcDur - 5) - typeStart; // Remove tail
+                    if (availableTime < 0) availableTime = 5;
+                    var typeDur = availableTime / 2.0; 
+                    var typeEnd = typeStart + typeDur;
+                    
+                    var anim = postL.Text.Animators.addProperty("ADBE Text Animator");
+                    anim.name = "Typewriter";
+                    anim.Properties.addProperty("ADBE Text Opacity").setValue(0);
+                    var range = anim.Selectors.addProperty("ADBE Text Selector");
+                    var startVal = range.property("Start");
+                    startVal.setValueAtTime(typeStart, 0);
+                    startVal.setValueAtTime(typeEnd, 100);
+
+                    // --- SMART SCROLL EXPRESSION LINKED TO TYPEWRITER PERCENTAGE ---
+                    var expr = "var percent = text.animator('Typewriter').selector('Range Selector 1').start;\\n" +
+                           "var charLimit = 35;\\n" + 
+                           "var lineHeight = 48;\\n" +
+                           "var totalChars = text.sourceText.length;\\n" +
+                           "var currentChars = (percent / 100) * totalChars;\\n" +
+                           "var linesCount = currentChars / charLimit;\\n" +
+                           "var scrollLines = Math.max(0, linesCount - 3);\\n" + 
+                           "var yOff = scrollLines * lineHeight;\\n" +
+                           "value - [0, yOff];";
+                    postL.position.expression = expr;
+                    
+                } else {
+                    // --- NORMAL SCROLLING LOGIC (NO AUDIO/TRANSCRIPTION MODE) ---
+                    var expr = "var delay = 5;\\n" +
+                           "var scrollTime = 1;\\n" +
+                           "var holdTime = 5;\\n" +
+                           "var lineHeight = 48;\\n" +
+                           "var linesToScroll = 3;\\n" +
+                           "var scrollDist = lineHeight * linesToScroll;\\n" +
+                           "var t = time - inPoint - delay;\\n" +
+                           "if (t < 0) { value; } else {\\n" +
+                           "    var cycle = Math.floor(t / (scrollTime + holdTime));\\n" +
+                           "    var phase = t % (scrollTime + holdTime);\\n" +
+                           "    var yOff = cycle * scrollDist;\\n" +
+                           "    if (phase < scrollTime) {\\n" +
+                           "        yOff += ease(phase, 0, scrollTime, 0, scrollDist);\\n" +
+                           "    } else {\\n" +
+                           "        yOff += scrollDist;\\n" +
+                           "    }\\n" +
+                           "    value - [0, yOff];\\n" +
+                           "}";
+                    postL.position.expression = expr;
+                }
+
+                var maskH = 320; 
+                var maskY = textStartY + (maskH/2) - 20; 
+                var textMatte = scComp.layers.addShape(); 
+                textMatte.name = "Text Matte";
+                var g = textMatte.property("Contents").addProperty("ADBE Vector Group");
+                var r = g.property("Contents").addProperty("ADBE Vector Shape - Rect");
+                r.property("Size").setValue([cardW, maskH]); 
+                var f = g.property("Contents").addProperty("ADBE Vector Graphic - Fill");
+                f.property("Color").setValue([1,1,1]);
+                textMatte.position.setValue([cardW/2, maskY]);
+                textMatte.moveBefore(postL);
+                postL.setTrackMatte(textMatte, TrackMatteType.ALPHA);
+
+                if(!data.config.glass) {
+                    addEntranceAnimation(postL, 1.5, data.config.anim, 0.8, 200);
+                }
+                return scComp;
+            }
+
+            // ... (rest of createShlishComp and main function remains similar) ...
+            function createShlishComp(duration) {
+                var c = getOrCreatePreComp(app.project, "SHLISH_ALL", 1920, 1080, [0,0,0], duration);
+                while(c.numLayers > 0) c.layer(1).remove();
+                
+                var accComp = getOrCreatePreComp(app.project, "Accent Source", 1400, 1200, [1,1,1], duration);
+                while(accComp.numLayers > 0) accComp.layer(1).remove();
+                var shapeL = accComp.layers.addShape();
+                var sg = shapeL.property("Contents").addProperty("ADBE Vector Group");
+                
+                var pathGroup = sg.property("Contents").addProperty("ADBE Vector Shape - Group");
+                var shape = pathGroup.property("Path").value;
+                var w = 920; 
+                var h = 1080;
+                
+                if (data.config.glass) {
+                    var r = 60; 
+                    var k = 0.55228 * r; 
+                    shape.vertices = [[w/2, -h/2], [w/2, h/2], [-w/2 + r, h/2], [-w/2, h/2 - r], [-w/2, -h/2 + r], [-w/2 + r, -h/2]];
+                    shape.inTangents = [[0,0], [0,0], [0,0], [0, k], [0, 0], [-k, 0]];
+                    shape.outTangents = [[0,0], [0,0], [-k, 0], [0, 0], [0, -k], [0,0]];
+                } else {
+                    shape.vertices = [[w/2, -h/2], [w/2, h/2], [-w/2, h/2], [-w/2, -h/2]];
+                    shape.inTangents = [[0,0],[0,0],[0,0],[0,0]];
+                    shape.outTangents = [[0,0],[0,0],[0,0],[0,0]];
+                }
+                shape.closed = true;
+                pathGroup.property("Path").setValue(shape);
+
+                var fill = sg.property("Contents").addProperty("ADBE Vector Graphic - Fill");
+                fill.property("Color").setValue(hexToRgb(data.colors.card));
+                
+                var accL = c.layers.add(accComp);
+                accL.name = "Accent Source";
+                accL.rotation.setValue(0); 
+                accL.position.setValue([340, 540]); 
+                var eff = accL.property("Effects").addProperty("ADBE Geometry2");
+                eff.property("Skew").setValue(data.config.skewMask ? 11 : 0);
+                eff.property("Skew Axis").setValue(-90); 
+
+                if(!data.config.disableGraphic) {
+                    var imgComp = getOrCreatePreComp(app.project, "PLACE IMAGE HERE", 1920, 1080, [0.5,0.5,0.5], duration);
+                    var imgL = c.layers.add(imgComp);
+                    imgL.name = "PLACE IMAGE HERE";
+                    imgL.setTrackMatte(accL, TrackMatteType.ALPHA);
+                    if(!data.config.glass) {
+                         imgL.opacity.setValueAtTime(0,0); imgL.opacity.setValueAtTime(1.5,0); imgL.opacity.setValueAtTime(2,100);
+                         if(data.config.animMain) { imgL.scale.expression = "value + [1,1]*(1-Math.cos(time*0.5))*3;"; }
+                         addEntranceAnimation(accL, 0.3, "slide", 0.8, 1500);
+                    }
+                }
+
+                if(data.config.skewMask && data.config.shine) {
+                    var sl = createShineLayer(c, [1,1,1], data.config.shineW, data.config.shineOff, true);
+                    if(!data.config.glass) {
+                        var op = sl.opacity;
+                        op.setValueAtTime(0, 0); op.setValueAtTime(2.0, 0); op.setValueAtTime(2.1, 100); 
+                    }
+                }
+                return c;
+            }
+
+            app.beginUndoGroup("Auto Graphics Run");
+            try {
+                var comp = getOrCreatePreComp(app.project, "Auto Graphics Comp", 1920, 1080, [0,0,0], data.calcDur);
+                comp.openInViewer();
+                var ph = findLayer(comp, "Placeholder"); if(ph) ph.enabled = false;
+
+                var bgL = findLayer(comp, "BG Solid"); if(bgL) bgL.remove();
+                var bgSolid = comp.layers.addSolid(hexToRgb(data.colors.bg), "BG Solid", 1920, 1080, 1, data.calcDur);
+                bgSolid.moveToEnd();
+                
+                var bgMediaComp = getOrCreatePreComp(app.project, "BG IMAGE HERE", 1920, 1080, [0.5,0.5,0.5], data.calcDur);
+                var bgMediaL = findLayer(comp, "BG IMAGE HERE");
+                if(!bgMediaL) { bgMediaL = comp.layers.add(bgMediaComp); bgMediaL.name = "BG IMAGE HERE"; }
+                bgMediaL.moveBefore(bgSolid);
+                if(data.config.glass) {
+                    bgMediaL.opacity.setValue(50);
+                    addRoundedMatte(comp, bgMediaL, 44);
+                }
+
+                if(!data.config.disableGraphic) {
+                    var shlishComp = createShlishComp(data.calcDur);
+                    var shlishL = findLayer(comp, "SHLISH_ALL");
+                    if(shlishL) shlishL.remove();
+                    shlishL = comp.layers.add(shlishComp);
+                    shlishL.name = "SHLISH_ALL";
+                    if (data.config.glass) {
+                        addRoundedMatte(comp, shlishL, 44);
+                    }
+                }
+
+                var audComp = getOrCreatePreComp(app.project, "PUT AUDIO HERE", 1920, 1080, [0.3,0,0.3], data.calcDur);
+                var audL = findLayer(comp, "PUT AUDIO HERE");
+                if(!audL) { audL = comp.layers.add(audComp); audL.name = "PUT AUDIO HERE"; audL.audioEnabled = true; }
+                audL.moveToEnd();
+                audL.opacity.setValue(0); audL.guideLayer = true;
+
+                if(data.config.disclaimer) {
+                    var dL = updateOrCreateText(comp, "Disclaimer", data.config.disclaimer, [1,1,1], 24, "AlmoniTzarAAA-Regular", "left");
+                    dL.position.setValue([120, 960]);
+                    dL.opacity.setValue(data.config.glass ? 100 : 0);
+                    if(!data.config.glass) { dL.opacity.setValueAtTime(2,0); dL.opacity.setValueAtTime(3,100); }
+                }
+
+                var curY = 200; var rightX = 1800;
+                var colText = [1,1,1]; var colBox1 = hexToRgb(data.colors.t1); var colBox2 = hexToRgb(data.colors.t2);
+                var extraPad = 12 + 5; // Updated padding +5 (total 17px vertical)
+                
+                if(data.title1) {
+                    var t1Font = getAlmoniFont(data.config.t1Weight);
+                    var t1 = updateOrCreateText(comp, "Title 1", data.title1, colText, data.config.title1Size, t1Font);
+                    var t1Rect = t1.sourceRectAtTime(0, false);
+                    updateLayerPosition(t1, [rightX-10, curY + 5 - t1Rect.top]);
+                    if(!data.config.glass) addEntranceAnimation(t1, 0.5, "slide", 0.8);
+                    
+                    if(!data.config.hideBoxT1) {
+                        var t1BoxH = t1Rect.height + 10 + (extraPad * 2);
+                        var b1 = updateOrCreateTrapezoid(comp, "Box 1", colBox1, rightX, curY - extraPad, t1Rect.width+40, t1BoxH, data.config.skewT1);
+                        b1.moveAfter(t1);
+                        if(!data.config.glass) addEntranceAnimation(b1, 0.5, "slide", 0.8);
+                    }
+                    curY += t1Rect.height + 10 + (extraPad * 2) + 30;
+                }
+
+                if(!data.config.disableT2 && data.title2) {
+                    var t2Font = getAlmoniFont(data.config.t2Weight);
+                    var t2 = updateOrCreateText(comp, "Title 2", data.title2, colText, 100, t2Font);
+                    var t2Rect = t2.sourceRectAtTime(0, false);
+                    updateLayerPosition(t2, [rightX-10, curY + 5 - t2Rect.top]);
+                    if(!data.config.glass) addEntranceAnimation(t2, 0.7, "slide", 0.8);
+                    
+                    if(!data.config.hideBoxT2) {
+                        var t2BoxH = t2Rect.height + 10 + (extraPad * 2);
+                        // --- UPDATED PADDING: Changed from 50 to 70 for extra spacing after text end ---
+                        var b2 = updateOrCreateTrapezoid(comp, "Box 2", colBox2, rightX, curY - extraPad, t2Rect.width+70, t2BoxH, data.config.skewT2);
+                        b2.moveAfter(t2);
+                        if(!data.config.glass) addEntranceAnimation(b2, 0.7, "slide", 0.8);
+                    }
+                    curY += t2Rect.height + 10 + (extraPad * 2) + 80;
+                }
+
+                if(!data.config.hideInstBanners) {
+                    var scComp = createSocialCardComp(comp);
+                    var scLayer = findLayer(comp, "Social Card Layer");
+                    if(scLayer) scLayer.remove();
+                    scLayer = comp.layers.add(scComp); 
+                    scLayer.name = "Social Card Layer";
+                    scLayer.position.setValue([1350, curY + 300]);
+                    
+                    if(!data.config.glass) {
+                        addEntranceAnimation(scLayer, 1.0, data.config.anim, 0.8, 200);
+                    }
+                }
+
+                importMediaFromDialog("BG IMAGE HERE", "center", data.media.folder, data.media.bg);
+                // PASSING THE FULL ABSOLUTE PATH TO THE IMPORT FUNCTION FOR MAIN
+                if(!data.config.disableGraphic) importMediaFromDialog("PLACE IMAGE HERE", data.config.align, data.media.folder, data.media.main, data.media.mainPath);
+                
+                // Attempt to auto-import Audio from the path provided in the form
+                // ONLY IF DURATION MODE IS 0 (AUDIO BASED) AND PATH EXISTS
+                if(data.durationMode == '0' && data.media.audioPath && data.media.audioPath.length > 3) {
+                    importAudioFromDialog("PUT AUDIO HERE", data.media.audioPath);
+                    // Find the audio layer and set start time
+                    var audL = findLayer(comp, "PUT AUDIO HERE");
+                    if(audL) audL.startTime = 1.5;
+                } else {
+                     // Ensure audio placeholder is muted/disabled if not in audio mode
+                     var audL = findLayer(comp, "PUT AUDIO HERE");
+                     if(audL) audL.audioEnabled = false;
+                }
+
+                if(data.config.glass) {
+                    comp.workAreaStart = 0;
+                    comp.workAreaDuration = comp.frameDuration;
+                    var bgl = findLayer(comp, "BG Solid");
+                    if(bgl) bgl.enabled = false;
+                }
+
+                alert("AE Script Generated Successfully!");
+            } catch(e) { alert("Error: " + e.toString()); }
+            app.endUndoGroup();
+        })();`;
+        
+        const blob = new Blob([script], {type:'application/octet-stream'});
+        const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = "SOCIAL_AE_SCRIPT.jsx"; link.click();
+    }
+};
+
+window.onload = () => UI.init();
+</script>
+</body>
+</html>
