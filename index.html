@@ -69,6 +69,15 @@
         .dropzone { border: 2px dashed #475569; border-radius: 8px; padding: 20px; text-align: center; color: #94a3b8; transition: all 0.3s ease; cursor: pointer; background-color: #1e293b; position: relative; }
         .dropzone:hover, .dropzone.dragover { border-color: #3b82f6; background-color: #334155; color: white; }
         .dropzone-preview { max-height: 100px; margin: 10px auto; border-radius: 4px; display: none; }
+
+        /* --- Loading Spinner --- */
+        .spinner { border: 4px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top: 4px solid #ffffff; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- Toast Notification (Replacing Alert) --- */
+        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; }
+        .toast { background-color: #334155; border: 1px solid #ef4444; color: white; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 12px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        .toast.show { opacity: 1; pointer-events: auto; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -122,7 +131,7 @@
 
                 <p id="live-datetime" class="text-gray-400 text-sm mb-6 text-center" dir="ltr"></p>
                 
-                <form id="orderForm" class="space-y-6">
+                <form id="orderForm" class="space-y-6" onsubmit="event.preventDefault(); saveFormAsText();">
                     <!-- פרטי הזמנה -->
                     <div class="p-4 border border-gray-600 rounded-lg" id="details-section">
                         <h3 class="text-lg font-bold mb-4 border-b border-gray-600 pb-2 text-blue-400 form-section-title">פרטי הזמנה</h3>
@@ -156,11 +165,13 @@
                                 <input type="checkbox" id="glass-wall-mode" class="h-5 w-5 text-blue-500 rounded border-gray-300 focus:ring-blue-500">
                                 <label for="glass-wall-mode" class="text-sm text-gray-300 mr-2">מצב קיר זכוכית</label>
                             </div>
+                            <!-- החזרת גודל פונט -->
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">גודל פונט כותרת:</label>
                                 <input type="number" id="title-font-size" class="input-style" value="135">
                             </div>
-                            <div>
+                            <!-- בחירת צורה - מופיע רק בבולטים -->
+                            <div id="shape-select-container">
                                 <label class="block text-sm text-gray-400 mb-1">צורת בולטים:</label>
                                 <select id="bullet-shape" class="select-style">
                                     <option value="none">מספרים (ברירת מחדל)</option>
@@ -169,8 +180,9 @@
                                     <option value="hidden">ללא</option>
                                 </select>
                             </div>
+                            <!-- אנימציה - כותרת משתנה -->
                             <div>
-                                <label class="block text-sm text-gray-400 mb-1">אנימציית בולטים:</label>
+                                <label class="block text-sm text-gray-400 mb-1" id="anim-label">אנימציית בולטים:</label>
                                 <select id="bullet-animation" class="select-style">
                                     <option value="slide">Slide</option>
                                     <option value="scale">Scale</option>
@@ -208,19 +220,32 @@
                             </label>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Main Image -->
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">תמונה ראשית:</label>
                                 <div id="main-image-dropzone" class="dropzone">
                                     <p class="mb-2">גרור תמונה לכאן או לחץ לבחירה</p>
-                                    <input type="file" id="main-image-input" accept="image/*" class="hidden" onchange="handleImageUpload(this)">
+                                    <input type="file" id="main-image-input" accept="image/*" class="hidden" onchange="handleImageUpload(this, 'main')">
                                     <img id="main-image-preview" class="dropzone-preview" alt="תצוגה מקדימה">
                                     <input type="text" id="main-image-path" class="input-style mt-2 text-xs" placeholder="נתיב הקובץ..." readonly>
                                 </div>
                             </div>
+                            <!-- Background Link -->
                             <div>
                                 <label class="block text-sm text-gray-400 mb-1">קישור תמונת רקע:</label>
                                 <input type="text" id="bg-image-link" class="input-style" placeholder="[הדבק קישור כאן]">
                             </div>
+                        </div>
+                        
+                        <!-- Profile Pic (Social Only) - Hidden by default -->
+                        <div id="profile-pic-container" class="mt-4 hidden">
+                             <label class="block text-sm text-gray-400 mb-1">תמונת פרופיל (לסושיאל):</label>
+                             <div id="profile-image-dropzone" class="dropzone border-blue-500/50">
+                                <p class="mb-2">גרור תמונת פרופיל לכאן</p>
+                                <input type="file" id="profile-image-input" accept="image/*" class="hidden" onchange="handleImageUpload(this, 'profile')">
+                                <img id="profile-image-preview" class="dropzone-preview rounded-full w-24 h-24 object-cover" alt="תצוגה מקדימה">
+                                <input type="text" id="profile-image-path" class="input-style mt-2 text-xs" placeholder="נתיב תמונת פרופיל..." readonly>
+                             </div>
                         </div>
                     </div>
 
@@ -245,9 +270,10 @@
                             <i class="fa-solid fa-eye"></i>
                             לחץ לתצוגה
                         </button>
-                        <button type="button" onclick="saveFormAsText()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex justify-center items-center gap-2">
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex justify-center items-center gap-2" id="submitBtn">
                             <i class="fa-solid fa-floppy-disk"></i>
-                            שמור כקובץ טקסט
+                            <span id="submitBtnText">שמור כקובץ טקסט</span>
+                            <div id="submitSpinner" class="spinner hidden"></div>
                         </button>
                     </div>
                 </form>
@@ -259,20 +285,29 @@
         </div>
     </main>
 
+    <!-- Toast Component -->
+    <div id="toast-container">
+        <div id="error-toast" class="toast">
+            <i class="fa-solid fa-circle-exclamation text-red-500 text-xl"></i>
+            <span>חלון קופץ נחסם! אנא אפשר חלונות קופצים עבור אתר זה.</span>
+        </div>
+    </div>
+
     <script>
         const DEFAULT_VIDEO = "https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/start%20here.mp4";
         const TEMPLATE_VIDEO = "https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/were%20here.mp4";
         
+        // Updated colors to match Designer Interface (where available)
         const SHOWS = [
-            { name: 'המהדורה המרכזית', presenter: 'מירי מיכאלי ודניאל רוט-אבנרי', role: '20:00', color: '#ef4444', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%9E%D7%99%D7%A8%D7%99_%D7%9E%D7%99%D7%9B%D7%90%D7%9C%D7%99_%D7%92%D7%93%D7%95%D7%9C.png', id: 'main' },
+            { name: 'המהדורה המרכזית', presenter: 'מירי מיכאלי ודניאל רוט-אבנרי', role: '20:00', color: '#0000FF', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%9E%D7%99%D7%A8%D7%99_%D7%9E%D7%99%D7%9B%D7%90%D7%9C%D7%99_%D7%92%D7%93%D7%95%D7%9C.png', id: 'main' },
             { name: 'קבינט שישי', presenter: 'נוה דרומי', role: 'שישי 19:53', color: '#f97316', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A0%D7%95%D7%95%D7%94_%D7%93%D7%A8%D7%95%D7%9E%D7%99_%D7%92%D7%93%D7%95%D7%9C.png', id: 'fri' },
             { name: 'מגזין השבת', presenter: 'מיכל רבינוביץ׳', role: 'שבת 19:50', color: '#22c55e', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%9E%D7%99%D7%9B%D7%9C_%D7%A8%D7%91%D7%99%D7%A0%D7%95%D7%91%D7%99%D7%A5_THUMB.png', id: 'sat' },
             { name: 'המהדורה המוקדמת', presenter: 'שרון גל', role: '19:00', color: '#eab308', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A9%D7%A8%D7%95%D7%9F_%D7%92%D7%9C_THUMB.png', id: 'early' },
-            { name: 'מדד גלבוע', presenter: 'ניב גלבוע', role: '18:00', color: '#6366f1', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A0%D7%99%D7%91_%D7%92%D7%9C%D7%91%D7%95%D7%A2.png', id: 'gilboa' },
+            { name: 'מדד גלבוע', presenter: 'ניב גלבוע', role: '18:00', color: '#B8860B', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A0%D7%99%D7%91_%D7%92%D7%9C%D7%91%D7%95%D7%A2.png', id: 'gilboa' },
             { name: 'מהדורת חמש', presenter: 'שרון ניסים', role: '17:00', color: '#8b5cf6', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A9%D7%A8%D7%95%D7%9F_%D7%A0%D7%99%D7%A1%D7%99%D7%9D.png', id: 'five' },
-            { name: 'הערביסטים', presenter: 'צבי יחזקאלי', role: 'חמישי ושבת', color: '#ec4899', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A6%D7%91%D7%99%D7%A7%D7%94_%D7%99%D7%97%D7%96%D7%A7%D7%9C%D7%99.png', id: 'arab' },
+            { name: 'הערביסטים', presenter: 'צבי יחזקאלי', role: 'חמישי ושבת', color: '#006400', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%A6%D7%91%D7%99%D7%A7%D7%94_%D7%99%D7%97%D7%96%D7%A7%D7%9C%D7%99.png', id: 'arab' },
             { name: 'הישראלים', presenter: 'אורי קואל', role: 'אחרי המרכזית', color: '#3b82f6', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%90%D7%95%D7%A8%D7%99_%D7%A7%D7%95%D7%95%D7%90%D7%9C.png', id: 'isra' },
-            { name: 'מדברים חדשות', presenter: 'אלירז שדה', role: '23:00', color: '#06b6d4', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%90%D7%9C%D7%99%D7%A8%D7%96_%D7%A9%D7%93%D7%94.png', id: 'talk' },
+            { name: 'מדברים חדשות', presenter: 'אלירז שדה', role: '23:00', color: '#D32F2F', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%90%D7%9C%D7%99%D7%A8%D7%96_%D7%A9%D7%93%D7%94.png', id: 'talk' },
             { name: 'מהדורת צהריים', presenter: 'דניאל רוט-אבנרי', role: '12:00', color: '#10b981', img: 'https://raw.githubusercontent.com/orengamchi/i24_gui_v2/main/%D7%93%D7%A0%D7%99%D7%90%D7%9C_%D7%A8%D7%95%D7%98_%D7%92%D7%93%D7%95%D7%9C.png', id: 'noon' },
             { name: 'חדר החדשות', presenter: 'צוות הכתבים', role: 'כל שעה', color: '#f43f5e', img: 'https://placehold.co/400x400/374151/f1f5f9?text=NEWS', id: 'news' }
         ];
@@ -302,11 +337,23 @@
                     { id: 'section7', label: 'סעיף 7', lines: 2, maxLen: 30, defaultValue: '[הקלד כאן]' },
                     { id: 'section8', label: 'סעיף 8', lines: 2, maxLen: 30, defaultValue: '[הקלד כאן]' },
                 ]
+            },
+            'SocialMedia': {
+                title: 'טופס הזמנה - סושיאל',
+                fields: [
+                    { id: 'main-title', label: 'כותרת ראשית', lines: 2, maxLen: 50, isBold: true, defaultValue: '[הקלד כאן]' },
+                    { id: 'subtitle', label: 'כותרת משנה', lines: 1, maxLen: 15, isBold: false, defaultValue: '[הקלד כאן]' },
+                    { id: 'social-name', label: 'שם תצוגה', lines: 1, maxLen: 30, defaultValue: 'ישראל ישראלי' },
+                    { id: 'social-handle', label: 'שם משתמש', lines: 1, maxLen: 30, defaultValue: '@israel_news' },
+                    { id: 'social-platform', label: 'פלטפורמה', type: 'select', options: ['Twitter', 'Facebook', 'Instagram', 'LinkedIn', 'WhatsApp'] },
+                    { id: 'post-content', label: 'טקסט סושיאל', isTextArea: true, lines: 9, maxLen: 1000, defaultValue: 'הקלד את תוכן הפוסט כאן...' }
+                ]
             }
         };
 
         let currentShow = null;
         let activeConfig = TEMPLATE_CONFIGS['Bullets'];
+        let activeTemplateId = 'Bullets';
 
         document.addEventListener('DOMContentLoaded', () => {
             renderMenu();
@@ -323,7 +370,20 @@
                 dropzone.addEventListener('drop', (e) => {
                     e.preventDefault();
                     dropzone.classList.remove('border-blue-500', 'bg-slate-700');
-                    if (e.dataTransfer.files.length) handleImageUpload({ files: e.dataTransfer.files });
+                    if (e.dataTransfer.files.length) handleImageUpload({ files: e.dataTransfer.files }, 'main');
+                });
+            }
+            
+            // Profile Dropzone
+            const pDropzone = document.getElementById('profile-image-dropzone');
+            if(pDropzone) {
+                pDropzone.addEventListener('click', () => document.getElementById('profile-image-input').click());
+                pDropzone.addEventListener('dragover', (e) => { e.preventDefault(); pDropzone.classList.add('border-blue-500', 'bg-slate-700'); });
+                pDropzone.addEventListener('dragleave', (e) => { e.preventDefault(); pDropzone.classList.remove('border-blue-500', 'bg-slate-700'); });
+                pDropzone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    pDropzone.classList.remove('border-blue-500', 'bg-slate-700');
+                    if (e.dataTransfer.files.length) handleImageUpload({ files: e.dataTransfer.files }, 'profile');
                 });
             }
         });
@@ -385,7 +445,8 @@
         function renderTemplates() {
             const grid = document.getElementById('templates-grid');
             grid.innerHTML = TEMPLATES.map(t => {
-                const isDisabled = t.id !== 'Bullets';
+                // Enable Bullets and SocialMedia
+                const isDisabled = (t.id !== 'Bullets' && t.id !== 'SocialMedia');
                 const disabledClass = isDisabled ? 'disabled-card' : '';
                 const geoIconClass = "geo-icon w-10 h-10 mx-auto mb-2"; 
                 
@@ -410,8 +471,10 @@
         }
 
         function openTemplate(type) {
-            if (type === 'Bullets') {
-                activeConfig = TEMPLATE_CONFIGS['Bullets'];
+            if (TEMPLATE_CONFIGS[type]) {
+                activeConfig = TEMPLATE_CONFIGS[type];
+                activeTemplateId = type;
+                
                 document.getElementById('template-lobby-view').classList.add('hidden');
                 document.getElementById('bullets-form-view').classList.remove('hidden');
                 
@@ -430,6 +493,23 @@
                 // Clear Image path
                 document.getElementById('main-image-path').value = '';
                 document.getElementById('main-image-preview').style.display = 'none';
+                
+                // Toggle Profile Pic for Social
+                const profileContainer = document.getElementById('profile-pic-container');
+                const shapeContainer = document.getElementById('shape-select-container');
+                const animLabel = document.getElementById('anim-label');
+
+                if (type === 'SocialMedia') {
+                    profileContainer.classList.remove('hidden');
+                    if(shapeContainer) shapeContainer.classList.add('hidden'); // Hide shape selector for social
+                    if(animLabel) animLabel.textContent = "אנימציית ציטוט:"; // Rename label
+                    document.getElementById('profile-image-path').value = '';
+                    document.getElementById('profile-image-preview').style.display = 'none';
+                } else {
+                    profileContainer.classList.add('hidden');
+                    if(shapeContainer) shapeContainer.classList.remove('hidden');
+                    if(animLabel) animLabel.textContent = "אנימציית בולטים:";
+                }
 
                 renderDynamicContent();
             } 
@@ -447,7 +527,7 @@
 
             activeConfig.fields.forEach(field => {
                 const sectionId = field.id;
-                const labelText = `${field.label} (מקסימום ${field.maxLen} תווים):`;
+                const labelText = `${field.label} (מקסימום ${field.maxLen || 50} תווים):`;
                 
                 let isHidden = false;
                 if (sectionId.startsWith('section')) {
@@ -472,14 +552,22 @@
 
                 if (field.isTextArea) {
                     html += `<textarea id="${sectionId}" class="input-style ${widthClass}" rows="${field.lines}" maxlength="${field.maxLen}" placeholder="${field.defaultValue}">${field.defaultValue || ''}</textarea>`;
+                } else if (field.type === 'select') {
+                    html += `<select id="${sectionId}" class="select-style ${widthClass}">`;
+                    field.options.forEach(opt => {
+                        html += `<option value="${opt}">${opt}</option>`;
+                    });
+                    html += `</select>`;
                 } else {
-                    for (let i = 1; i <= field.lines; i++) {
+                    const lines = field.lines || 1;
+                    for (let i = 1; i <= lines; i++) {
                         const extraClasses = field.isBold ? 'font-bold text-lg' : '';
                         const ph = i > 1 ? `שורה ${i}` : field.defaultValue;
+                        const inputId = lines > 1 ? `${sectionId}-line${i}` : sectionId;
                         
                         html += `
                         <div class="mb-2">
-                            <input type="text" id="${sectionId}-line${i}" 
+                            <input type="text" id="${inputId}" 
                                    class="input-style ${extraClasses} ${widthClass}" 
                                    placeholder="${ph}" 
                                    value="${field.defaultValue && i===1 ? field.defaultValue : ''}" 
@@ -490,13 +578,15 @@
                 html += `</div>`;
             });
 
-            html += `
-            <div class="flex justify-center mt-4" id="add-bullet-container">
-                <button type="button" onclick="showNextBullet()" class="flex items-center text-blue-400 hover:text-white border border-blue-400 hover:bg-blue-600 font-bold py-2 px-6 rounded-full transition-all text-sm">
-                    <i class="fa-solid fa-plus ml-2"></i> הוסף שורה נוספת
-                </button>
-            </div>
-            `;
+            if(activeTemplateId === 'Bullets') {
+                html += `
+                <div class="flex justify-center mt-4" id="add-bullet-container">
+                    <button type="button" onclick="showNextBullet()" class="flex items-center text-blue-400 hover:text-white border border-blue-400 hover:bg-blue-600 font-bold py-2 px-6 rounded-full transition-all text-sm">
+                        <i class="fa-solid fa-plus ml-2"></i> הוסף שורה נוספת
+                    </button>
+                </div>
+                `;
+            }
             
             html += `
             <div class="mt-8 p-4 border-t border-gray-700">
@@ -507,19 +597,22 @@
             container.innerHTML = html;
             
             setupEnterKeyNavigation();
-            checkAddButtonVisibility();
+            if(activeTemplateId === 'Bullets') checkAddButtonVisibility();
         }
         
-        function handleImageUpload(input) {
+        function handleImageUpload(input, type) {
             if (input.files && input.files[0]) {
                 var reader = new FileReader();
                 reader.onload = function(e) {
-                    const preview = document.getElementById('main-image-preview');
+                    const previewId = type === 'profile' ? 'profile-image-preview' : 'main-image-preview';
+                    const preview = document.getElementById(previewId);
                     preview.src = e.target.result;
                     preview.style.display = 'block';
                 }
                 reader.readAsDataURL(input.files[0]);
-                document.getElementById('main-image-path').value = input.files[0].name; // Save filename as path
+                
+                const pathId = type === 'profile' ? 'profile-image-path' : 'main-image-path';
+                document.getElementById(pathId).value = input.files[0].name; 
             }
         }
 
@@ -544,14 +637,18 @@
             const section = document.getElementById(sectionId + '-section');
             if(!section) return;
             const isCancelled = section.classList.toggle('cancelled');
-            section.querySelectorAll('input, textarea').forEach(input => {
+            section.querySelectorAll('input, textarea, select').forEach(input => {
                 if(isCancelled) {
                     input.setAttribute('disabled', 'true');
                     input.dataset.oldValue = input.value;
-                    input.value = "מבוטל";
+                    if(input.tagName === 'SELECT') {
+                        // Keep value but visually disabled
+                    } else {
+                        input.value = "מבוטל";
+                    }
                 } else {
                     input.removeAttribute('disabled');
-                    input.value = input.dataset.oldValue || "";
+                    if(input.tagName !== 'SELECT') input.value = input.dataset.oldValue || "";
                 }
             });
         }
@@ -610,8 +707,8 @@
             const editionName = getVal('edition-name');
             const broadcastDate = getVal('broadcast-date');
             const estimatedTime = getVal('estimated-time');
-            const mainTitle = getVal('main-title-line1');
-            const subTitle = getVal('subtitle-line1');
+            const mainTitle = getVal('main-title-line1') || getVal('main-title'); // Support both line1 and direct ID
+            const subTitle = getVal('subtitle-line1') || getVal('subtitle');
             const glassWall = document.getElementById('glass-wall-mode')?.checked ? 'true' : 'false';
             
             const fontSize = getVal('title-font-size');
@@ -621,16 +718,30 @@
             const mainImage = getVal('main-image-path'); 
             const bgImage = getVal('bg-image-link');
             
+            // Social fields
+            const socialName = getVal('social-name');
+            const socialHandle = getVal('social-handle');
+            const socialPlatform = getVal('social-platform');
+            const postContent = getVal('post-content');
+
             let items = [];
-            for(let i = 1; i <= 8; i++) {
-                const el = document.getElementById(`section${i}-line1`);
-                if(el && el.value && el.value !== '[הקלד כאן]') {
-                    items.push(el.value);
+            // Basic param extraction - only for Bullets for now in Editor
+            if(activeTemplateId === 'Bullets') {
+                for(let i = 1; i <= 8; i++) {
+                    const el = document.getElementById(`section${i}-line1`);
+                    if(el && el.value && el.value !== '[הקלד כאן]') {
+                        items.push(el.value);
+                    }
                 }
             }
             
-            // שינוי הקישור לעורך ל-raw.githack.com
-            const editorBaseUrl = 'https://raw.githack.com/orengamchi/i24_demo_app/refs/heads/main/after_coder_v36_clean_demo.html';
+            // Default URL for Bullets
+            let editorBaseUrl = 'https://raw.githack.com/orengamchi/i24_demo_app/refs/heads/main/after_coder_v36_clean_demo.html';
+            
+            // Switch URL for SocialMedia
+            if(activeTemplateId === 'SocialMedia') {
+                 editorBaseUrl = 'https://raw.githack.com/orengamchi/i24_demo_app/main/SOCIAL_DEMO_MASTER_SITE.html';
+            }
             
             const params = new URLSearchParams();
             if(senderName) params.append('sender', senderName);
@@ -651,15 +762,36 @@
             params.append('anim', anim);
             if(disclaimer) params.append('disclaimer', disclaimer);
 
+            // Append Social Params
+            if(activeTemplateId === 'SocialMedia') {
+                 if(socialName) params.append('social_name', socialName);
+                 if(socialHandle) params.append('social_handle', socialHandle);
+                 if(socialPlatform) params.append('platform', socialPlatform);
+                 if(postContent) params.append('post_text', postContent);
+            }
+
             const fullUrl = `${editorBaseUrl}?${params.toString()}`;
             
             const newWindow = window.open(fullUrl, '_blank');
             if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') { 
-                alert("חלון קופץ נחסם! אנא אפשר חלונות קופצים עבור אתר זה כדי לפתוח את העורך.");
+                const toast = document.getElementById('error-toast');
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 5000);
             }
         }
 
         function saveFormAsText() {
+            // התחלת ספינר
+            const btn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('submitBtnText');
+            const spinner = document.getElementById('submitSpinner');
+            
+            if (btn) btn.disabled = true;
+            if (btnText) btnText.textContent = "שומר...";
+            if (spinner) spinner.classList.remove('hidden');
+
             const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : '';
             
             const sender = getVal('sender-name');
@@ -671,10 +803,6 @@
             const formattedDate = date ? dateObj.toLocaleDateString('he-IL') : '';
 
             const glassMode = document.getElementById('glass-wall-mode')?.checked ? 'כן' : 'לא';
-            const fontSize = getVal('title-font-size');
-            
-            const shapeEl = document.getElementById('bullet-shape');
-            const shape = shapeEl ? shapeEl.options[shapeEl.selectedIndex].text : '';
             
             const animEl = document.getElementById('bullet-animation');
             const anim = animEl ? animEl.options[animEl.selectedIndex].text : '';
@@ -687,25 +815,7 @@
             const dateForFile = dateObj.toLocaleDateString('en-GB').replace(/\//g, '-'); 
             const filename = `${safeEdition}_${dateForFile}.txt`;
 
-            let content = `נושא: ${activeConfig.title} (מהדורת ${formattedDate})
-----------------------------------------
-פרטי הזמנה:
-שם השולח/כתב: ${sender || '[לא מולא]'}
-שם המהדורה: ${edition || '[לא מולא]'}
-תאריך שידור: ${formattedDate}
-שעת שידור משוערת: ${time}
-----------------------------------------
-מצב קיר זכוכית: ${glassMode}
-גודל פונט כותרת: ${fontSize}
-----------------------------------------
-צורת בולטים (מחק את המיותר):
-${shape}
-----------------------------------------
-אנימציית בולטים (מחק את המיותר):
-${anim}
-----------------------------------------
-קבצים מצורפים (סמן ב-X אם רלוונטי):
-`;
+            // Common Files Logic
             const files = Array.from(document.querySelectorAll('.attachment-checkbox')).map(cb => {
                 const label = cb.dataset.label;
                 const mark = cb.checked ? '[X]' : '[ ]';
@@ -714,43 +824,146 @@ ${anim}
                 if(label.includes('וידאו')) return `${mark} קובץ וידאו`;
                 return `${mark} ${label}`;
             }).join('\n');
-            content += files + '\n\n';
 
             const mainLink = getVal('main-image-path'); 
             const bgLink = getVal('bg-image-link');
-            content += `קישור תמונה ראשית: ${mainLink} \n`;
-            content += `קישור תמונת רקע: ${bgLink} \n`;
             
-            content += `----------------------------------------\n`;
-            content += `תוכן הגרפיקה (נא למלא במדויק):\n\n`;
-            
-            activeConfig.fields.forEach(f => {
-                const sec = document.getElementById(f.id + '-section');
-                if (!sec || sec.classList.contains('hidden')) return; 
+            // Fixed base paths matching the other file
+            const shlishBase = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\SHLISH\\";
+            const socialBase = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\SOCIAL\\";
+            const audioBase = "C:\\Users\\user\\Desktop\\oren_plugin_demo\\MEDIA FILES\\AUDIO\\";
 
-                content += `${f.label}:\n`;
-                if(sec.classList.contains('cancelled')) {
-                    content += `[מבוטל]\n\n`;
-                } else {
-                    if(f.isTextArea) {
-                        content += getVal(f.id) + '\n\n';
+            let mainTxt = mainLink ? (mainLink.includes('\\') ? mainLink : shlishBase + mainLink) : (shlishBase + "[שם קובץ]");
+            
+            let content = '';
+
+            // --- SOCIAL MEDIA TEMPLATE FORMAT ---
+            if (activeTemplateId === 'SocialMedia') {
+                const platformVal = getVal('social-platform');
+                const profileLink = getVal('profile-image-path');
+                let profileTxt = profileLink ? (profileLink.includes('\\') ? profileLink : socialBase + profileLink) : (socialBase + "[שם קובץ]");
+
+                // Convert Dropdown Value to Numbered List Format
+                let platformTxt = "";
+                if (platformVal.includes("Twitter")) platformTxt = "1. Twitter / X";
+                else if (platformVal.includes("Facebook")) platformTxt = "2. Facebook";
+                else if (platformVal.includes("Instagram")) platformTxt = "3. Instagram";
+                else if (platformVal.includes("LinkedIn")) platformTxt = "4. LinkedIn";
+                else if (platformVal.includes("WhatsApp")) platformTxt = "5. WhatsApp";
+                else platformTxt = platformVal;
+
+                // Format Animation Selection to Numbered Format
+                let animTxt = "";
+                if (anim.includes("Slide")) animTxt = "1. Slide";
+                else if (anim.includes("Scale")) animTxt = "2. Scale";
+                else if (anim.includes("Fade")) animTxt = "3. Fade";
+                else animTxt = anim;
+
+                content = `----------------------------------------
+פרטי הזמנה:
+שם השולח/כתב: ${sender || '[לא מולא]'}
+שם המהדורה: ${edition || '[לא מולא]'}
+תאריך שידור: ${formattedDate}
+שעת שידור משוערת: ${time}
+----------------------------------------
+מצב קיר זכוכית: ${glassMode}
+ 
+----------------------------------------
+אנימציית ציטוט (מחק את המיותר):
+${animTxt}
+----------------------------------------
+פלטפורמה (מחק את המיותר):
+${platformTxt}
+----------------------------------------
+קבצים מצורפים (סמן ב-X אם רלוונטי):
+${files}
+
+קישור תמונה ראשית: ${mainTxt}
+קישור תמונת פרופיל: ${profileTxt}
+קישור קובץ אודיו: ${audioBase}
+----------------------------------------
+תוכן הגרפיקה (נא למלא במדויק):
+
+כותרת ראשית:
+${getVal('main-title-line1') || getVal('main-title')}
+
+כותרת משנה:
+${getVal('subtitle-line1') || getVal('subtitle')}
+
+שם תצוגה:
+${getVal('social-name')}
+
+שם משתמש:
+${getVal('social-handle')}
+
+טקסט סושיאל:
+${getVal('post-content')}
+`;
+            } 
+            // --- BULLETS TEMPLATE FORMAT (Default) ---
+            else {
+                content = `נושא: ${activeConfig.title} (מהדורת ${formattedDate})
+----------------------------------------
+פרטי הזמנה:
+שם השולח/כתב: ${sender || '[לא מולא]'}
+שם המהדורה: ${edition || '[לא מולא]'}
+תאריך שידור: ${formattedDate}
+שעת שידור משוערת: ${time}
+----------------------------------------
+מצב קיר זכוכית: ${glassMode}
+----------------------------------------
+`;
+                const shapeEl = document.getElementById('bullet-shape');
+                const shape = shapeEl ? shapeEl.options[shapeEl.selectedIndex].text : '';
+                content += `צורת בולטים (מחק את המיותר):
+${shape}
+----------------------------------------
+אנימציית בולטים (מחק את המיותר):
+${anim}
+----------------------------------------
+`;
+                content += `קבצים מצורפים (סמן ב-X אם רלוונטי):\n${files}\n\n`;
+                content += `קישור תמונה ראשית: ${mainTxt} \n`;
+                content += `קישור תמונת רקע: ${bgLink} \n`;
+                content += `קישור קובץ אודיו: ${audioBase} \n`;
+                
+                content += `----------------------------------------\n`;
+                content += `תוכן הגרפיקה (נא למלא במדויק):\n\n`;
+                
+                activeConfig.fields.forEach(f => {
+                    const sec = document.getElementById(f.id + '-section');
+                    if (!sec || sec.classList.contains('hidden')) return; 
+
+                    content += `${f.label}:\n`;
+                    if(sec.classList.contains('cancelled')) {
+                        content += `[מבוטל]\n\n`;
                     } else {
-                        for(let i=1; i<=f.lines; i++) {
-                            const val = getVal(`${f.id}-line${i}`);
-                            content += val + '\n';
+                        if(f.isTextArea || f.type === 'select') {
+                            content += getVal(f.id) + '\n\n';
+                        } else {
+                            const lines = f.lines || 1;
+                            if(lines > 1) {
+                                for(let i=1; i<=lines; i++) {
+                                    const val = getVal(`${f.id}-line${i}`);
+                                    content += val + '\n';
+                                }
+                            } else {
+                                     const val = getVal(f.id);
+                                     content += val + '\n';
+                            }
+                            content += '\n';
                         }
-                        content += '\n';
                     }
+                });
+                
+                content += `----------------------------------------\n`;
+                content += `הערות נוספות לגרפיקאי (צבעים/סגנון/דגשים):\n`;
+                content += `${notes || '[הקלד כאן]'}\n\n`;
+                
+                if (disclaimer) {
+                     content += `----------------------------------------\n`;
+                     content += `דיסקליימר:\n${disclaimer}\n`;
                 }
-            });
-            
-            content += `----------------------------------------\n`;
-            content += `הערות נוספות לגרפיקאי (צבעים/סגנון/דגשים):\n`;
-            content += `${notes || '[הקלד כאן]'}\n\n`;
-            
-            if (disclaimer) {
-                 content += `----------------------------------------\n`;
-                 content += `דיסקליימר:\n${disclaimer}\n`;
             }
 
             const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
@@ -761,12 +974,16 @@ ${anim}
             a.click();
             document.body.removeChild(a);
             
-            logRequest('Bullets', 'internal', 'פנימי');
+            logRequest(activeTemplateId, 'internal', 'פנימי').then(() => {
+                if (btn) btn.disabled = false;
+                if (btnText) btnText.textContent = "שמור כקובץ טקסט";
+                if (spinner) spinner.classList.add('hidden');
+            });
         }
 
-        window.logRequest = function(type, url, status) {
+        window.logRequest = async function(type, url, status) {
             if(window.app && window.app.logToFirebase) {
-                window.app.logToFirebase(type, url, status);
+                await window.app.logToFirebase(type, url, status);
             }
         };
     </script>
@@ -790,13 +1007,20 @@ ${anim}
             window.app.logToFirebase = async (type, url, status) => {
                 if (!auth.currentUser) return;
                 try {
+                    const formData = {
+                         sender: document.getElementById('sender-name')?.value || '',
+                         edition: document.getElementById('edition-name')?.value || '',
+                         broadcastDate: document.getElementById('broadcast-date')?.value || '',
+                    };
+
                     await addDoc(collection(db, `/artifacts/${appId}/public/data/graphics_requests_log`), {
-                        show: document.getElementById('edition-name').value || 'כללי',
+                        show: formData.edition || 'כללי',
                         templateType: type,
                         reporterId: auth.currentUser.uid,
                         externalUrl: url,
                         timestamp: serverTimestamp(),
-                        status: status
+                        status: status,
+                        fullData: formData 
                     });
                 } catch (e) { console.error("Log failed", e); }
             };
